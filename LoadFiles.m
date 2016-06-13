@@ -1,3 +1,4 @@
+
 %function settings
 nr_load_fr=2; %how many consectives frames in file
 nr_skip_fr=18; %how many frames to skip reading
