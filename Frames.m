@@ -12,8 +12,11 @@ classdef Frames < handle
         
         %data
         rfm %rf matrix
-        p0_recon_TR
-        p0_recon_FT
+        rfm_b %backup of rfm matrix
+        p0_recon_TR %reconstruction using time reversal
+        p0_recon_FT %reconstruction using fourier transform
+        QS1 %number of initial points to discard: Frame 1
+        QS2 %number of initial points to discard: Frame 2
         
         %k-Wave settings
         kgrid
@@ -38,12 +41,15 @@ classdef Frames < handle
             obj.flw_r = flow_rate;
             obj.RF = RF_settings;
             obj.pathname = pathname; %location of data
-            obj.filename = filename
+            obj.filename = filename; %name of .mat file
             
             dx = obj.RF.pitch*1E-3;
             dy = obj.RF.speed_of_sound*obj.dt;
             obj.X = [0:dx:(obj.finfo.nrl-1)*dx]*1E3-(obj.finfo.nrl/2)*dx*1E3;
             obj.Y = [0:dy:(obj.finfo.nrs-1)*dy]*1E3;
+            
+            obj.QS1=0;
+            obj.QS2=0;
         end
         function ReadRFM (obj, rfm)
             if obj.rfm
@@ -51,7 +57,15 @@ classdef Frames < handle
             else
                 obj.rfm = rfm;
             end
+            obj.rfm_b = obj.rfm; %backup original rf matrix
         end %Read RFM files
+        function LoadRFM(obj) %
+            if ~obj.rfm_b
+                obj.rfm=obj.rfm_b;
+            else
+                warning('There is no backup RF data stored.')
+            end
+        end %Load RF data from internal backup
         function KWaveInit(obj) %Setup for k-wave toolbox
             c = obj.RF.speed_of_sound;
             obj.dt=1/obj.acq.fs;
@@ -100,7 +114,7 @@ classdef Frames < handle
             end
             close(h);
             disp('Saving..');
-            obj.save()
+            obj.Save()
             disp('Done.');
         end
         function FT(obj,N) %Reconstruction via fourier transform
@@ -119,10 +133,19 @@ classdef Frames < handle
             end
             close(h);
             disp('Saving..');
-            obj.save()
+            obj.Save()
             disp('Done.');
         end
-        function save(obj) %save the object to original folder
+        function QSCorrect(obj,QS1, QS2) %Q Switch correction
+            %Removes initial data points of frame pairs
+            %Only necessary if acquisition is not triggered by the laser
+            %output
+            %QS1 and QS2 given in ns
+            %Convert ns to data points to discard
+            obj.QS1=QS1*1E-9*obj.acq.fs;
+            obj.QS2=QS2*1E-9*obj.acq.fs;            
+        end
+        function Save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'.mat'],'obj')
         end
         function PlotRFM (obj)
@@ -149,8 +172,8 @@ classdef Frames < handle
             caxis([-20 20])
         end
         function PlotTR (obj) 
-            Im1=obj.p0_recon_TR(100:end,:,1);
-            Im2=obj.p0_recon_TR(100:end,:,2);
+            Im1=obj.p0_recon_TR(:,:,1);
+            Im2=obj.p0_recon_TR(:,:,2);
             figure;
             colormap('gray');
             
