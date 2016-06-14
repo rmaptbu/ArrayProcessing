@@ -56,6 +56,7 @@ classdef Frames < handle
             c = obj.RF.speed_of_sound;
             obj.dt=1/obj.acq.fs;
             
+            %nrl=number of lines, nrs=number of samples
             Nx = obj.finfo.nrl;  % number of grid points in the x (row) direction
             Ny = obj.finfo.nrs;  % number of grid points in the y (column) direction
             dx = obj.RF.pitch*1E-3;    % grid point spacing in the x direction [m]
@@ -85,8 +86,10 @@ classdef Frames < handle
                 N=size(obj.rfm,3);
             end
             obj.p0_recon_TR=zeros(obj.finfo.nrs,obj.finfo.nrl,N);
+            h = waitbar(0, 'Initialising Waitbar');
+            msg='Computing time reversal...';
             for i=1:N
-                disp(i/N)
+                waitbar(i/N,h,msg);
                 sensor_data=obj.rfm(:,:,i)';
                 obj.sensor.time_reversal_boundary_data = sensor_data;
                 recon = kspaceFirstOrder2D(obj.kgrid, obj.medium,...
@@ -95,40 +98,55 @@ classdef Frames < handle
                 recon = recon*2;
                 obj.p0_recon_TR(:,:,i) = recon';
             end
+            close(h);
+            disp('Saving..');
+            obj.save()
+            disp('Done.');
         end
         function FT(obj,N) %Reconstruction via fourier transform
             if ~N
                 N=size(obj.rfm,3);
             end
             dy = obj.RF.speed_of_sound*obj.dt;
+            h = waitbar(0, 'Initialising Waitbar');
+            msg='Computing FFT...';
             for i=1:N
+                waitbar(i/N,h,msg);
                 disp(i/N)
-                sensor_data=obj.rfm(:,:,i)';
-                obj.p0_recon_FT(:,:,i) = kspaceLineRecon(sensor_data.', dy, obj.dt, ...
-                    obj.medium.sound_speed, 'PosCond', true, 'Interp', '*linear');
+                sensor_data=obj.rfm(:,:,i);
+                obj.p0_recon_FT(:,:,i) = kspaceLineRecon(sensor_data, dy, obj.dt, ...
+                    obj.medium.sound_speed);%, 'Interp', '*linear');
             end
+            close(h);
+            disp('Saving..');
+            obj.save()
+            disp('Done.');
         end
         function save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'.mat'],'obj')
         end
         function PlotRFM (obj)
-            Im1=obj.rfm(100:end,:,1);
-            Im2=obj.p0_recon_TR(100:end,:,1);
-            Im3=obj.p0_recon_FT(100:end,:,1);
+            
+            Im1=obj.rfm(10:end,:,1);
+            Im2=obj.p0_recon_TR(10:end,:,1);
+            Im3=obj.p0_recon_FT(10:end,:,1);
             figure;
             colormap('gray');
             
             subplot(1,3,1)
             imagesc(obj.X,obj.Y,Im1);
             title('Raw');
+            caxis([-20 20])
             
             subplot(1,3,2)
             imagesc(obj.X,obj.Y,Im2);
             title('Time Reversal');
+            caxis([-20 20])
             
             subplot(1,3,3)
             imagesc(obj.X,obj.Y,Im3);
             title('Fourier Transform');
+            caxis([-20 20])
         end
         function PlotTR (obj) 
             Im1=obj.p0_recon_TR(100:end,:,1);

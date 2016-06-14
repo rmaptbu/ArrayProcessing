@@ -35,28 +35,30 @@ for i=1:length(cases)
     end
 end
 
-%% Load PA data
-% load file settings
-PAFrames = LoadFrames(pathname, 'PAFrames', PAFiles, nr_load_fr, nr_skip_fr);
-
-%% Load US data
-% load file settings
-filename=[pathname,'/',USFiles{1}];
-[finfo, acq, tran, ~, ~] = ReadRFE(filename, 20, 0);
-USFrames = Frames (finfo,acq,tran,flow_settings,flow_rate,RF_settings,...
-    pathname, 'USFrames');
-
-%load frames
-for i = 1:length(USFiles);
-    filename=[pathname,'/',USFiles{i}];
-    [~, ~, ~, ~, rfm] = ReadRFE(filename, 20, 0);
-    USFrames.ReadRFM(rfm);
+%% Load data
+% load PA file settings
+PAFrames = LoadFrames(pathname, 'PAFrames', PAFiles,...
+    nr_load_fr, nr_skip_fr,flow_settings, flow_rate, RF_settings);
+if ~isa(PAFrames,'Frames')
+    disp('changing type')
+    PAFrames = typecast(PAFrames,'Frames');
 end
+
+% load US file settings
+USFrames = LoadFrames(pathname, 'USFrames', USFiles,...
+    20,0,flow_settings, flow_rate, RF_settings);
+if ~isa(USFrames,'Frames')
+    disp('changing type')
+    USFrames = typecast(USFrames,'Frames');
+end
+
+%%Initialise K-Wave
 PAFrames.KWaveInit();
 USFrames.KWaveInit();
 end
 
-function [frames] = LoadFrames(pathname,objname,files,nr_load_fr, nr_skip_fr)
+function [frames] = LoadFrames(pathname,objname,files,...
+    nr_load_fr, nr_skip_fr,flow_settings, flow_rate, RF_settings)
 currentpath=pwd;
 cd(pathname)
 if exist([objname,'.mat'], 'file')
@@ -66,13 +68,14 @@ if exist([objname,'.mat'], 'file')
     switch button
         case 'Yes'
             frames = load([pathname,'/',objname,'.mat']);
-            frames = frames.obj;
             cd(currentpath)
+            frames = frames.obj;            
             return
         case 'No'
             % load file settings
     end
 end
+cd(currentpath)
  % load file settings
     filename=[pathname,'/',files{1}];
     [finfo, acq, tran, ~, ~] = ReadRFE(filename, nr_load_fr, nr_skip_fr);
@@ -85,7 +88,7 @@ end
         [~, ~, ~, ~, rfm] = ReadRFE(filename, nr_load_fr, nr_skip_fr);
         frames.ReadRFM(rfm);
     end
-    cd(currentpath)
+    
 end
 
 
