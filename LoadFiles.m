@@ -1,10 +1,22 @@
-function [PAFrames, USFrames, pathname] = LoadFiles ()
+function [PAFrames, USFrames, pathname] = LoadFiles(varargin)
 %function settings
 nr_load_fr=2; %how many consectives frames in file
 nr_skip_fr=18; %how many frames to skip reading
-%select folder
-pathname = uigetdir('/Users/Thore/Documents/Transducer Measurements/160707LinArray');
 
+if ~isempty(varargin)
+    for input_index = 1:2:length(varargin)
+        switch varargin{input_index}
+            case 'Path'
+                pathname = varargin{input_index + 1};
+            otherwise
+                error('Unknown optional input');
+        end
+    end
+end              
+%select folder
+if ~exist('pathname','var')
+    pathname = uigetdir('/Users/Thore/Documents/Transducer Measurements/160707LinArray');
+end
 %% Initialise
 %create list of folder contents
 cases=struct2cell(dir(pathname));
@@ -25,22 +37,14 @@ end
 
 %% Load PA data
 % load file settings
-filename=[pathname,'/',PAFiles{1}];
-[finfo, acq, tran, ~, ~] = ReadRFE(filename, nr_load_fr, nr_skip_fr);
-PAFrames = Frames (finfo,acq,tran,flow_settings,flow_rate,RF_settings);
-
-%load frames
-for i = 1:length(PAFiles);
-    filename=[pathname,'/',PAFiles{i}];
-    [~, ~, ~, ~, rfm] = ReadRFE(filename, nr_load_fr, nr_skip_fr);
-    PAFrames.ReadRFM(rfm);
-end
+PAFrames = LoadFrames(pathname, 'PAFrames', PAFiles, nr_load_fr, nr_skip_fr);
 
 %% Load US data
 % load file settings
 filename=[pathname,'/',USFiles{1}];
 [finfo, acq, tran, ~, ~] = ReadRFE(filename, 20, 0);
-USFrames = Frames (finfo,acq,tran,flow_settings,flow_rate,RF_settings);
+USFrames = Frames (finfo,acq,tran,flow_settings,flow_rate,RF_settings,...
+    pathname, 'USFrames');
 
 %load frames
 for i = 1:length(USFiles);
@@ -48,7 +52,42 @@ for i = 1:length(USFiles);
     [~, ~, ~, ~, rfm] = ReadRFE(filename, 20, 0);
     USFrames.ReadRFM(rfm);
 end
+PAFrames.KWaveInit();
+USFrames.KWaveInit();
 end
+
+function [frames] = LoadFrames(pathname,objname,files,nr_load_fr, nr_skip_fr)
+currentpath=pwd;
+cd(pathname)
+if exist([objname,'.mat'], 'file')
+    title=['Load ',objname];
+    msg=['Load existing ',objname,'.mat?'];
+    button=questdlg(msg,title,'Yes','No','Yes');
+    switch button
+        case 'Yes'
+            frames = load([pathname,'/',objname,'.mat']);
+            frames = frames.obj;
+            cd(currentpath)
+            return
+        case 'No'
+            % load file settings
+    end
+end
+ % load file settings
+    filename=[pathname,'/',files{1}];
+    [finfo, acq, tran, ~, ~] = ReadRFE(filename, nr_load_fr, nr_skip_fr);
+    frames = Frames(finfo,acq,tran,flow_settings,flow_rate,RF_settings,...
+        pathname, objname);
+    
+    %load frames
+    for i = 1:length(files);
+        filename=[pathname,'/',files{i}];
+        [~, ~, ~, ~, rfm] = ReadRFE(filename, nr_load_fr, nr_skip_fr);
+        frames.ReadRFM(rfm);
+    end
+    cd(currentpath)
+end
+
 
 function [flow_settings, flow_rate, RF_settings] = LoadSettings(pathname)
 currentpath=pwd;
