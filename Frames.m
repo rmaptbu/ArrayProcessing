@@ -66,15 +66,37 @@ classdef Frames < handle
                 warning('There is no backup RF data stored.')
             end
         end %Load RF data from internal backup
-        function KWaveInit(obj) %Setup for k-wave toolbox
+        function KWaveInit(obj, varargin) %Setup for k-wave toolbox
+            upsample=0;
+            if ~isempty(varargin)
+                for input_index = 1:2:length(varargin)
+                    switch varargin{input_index}
+                        case 'Upsample'
+                            upsample = varargin{input_index + 1};
+                        otherwise
+                            error('Unknown optional input');
+                    end
+                end
+            end
+            
+            
             c = obj.RF.speed_of_sound;
             obj.dt=1/obj.acq.fs;
             
             %nrl=number of lines, nrs=number of samples
             Nx = obj.finfo.nrl;  % number of grid points in the x (row) direction
-            Ny = obj.finfo.nrs;  % number of grid points in the y (column) direction
+            Ny = size(obj.rfm,1);  % number of grid points in the y (column) direction
             dx = obj.RF.pitch*1E-3;    % grid point spacing in the x direction [m]
             dy = c*obj.dt;         % grid point spacing in the y direction [m]
+            
+            if upsample
+            %upsampling detectors to match dy...
+            N = floor(dx/dy);
+            dx = dx/N;
+            Nx = Nx*N;
+            obj.Upsample(N);
+            end
+            
             obj.kgrid = makeGrid(Nx, dx, Ny, dy);
           
             obj.medium.sound_speed = c;	% [m/s]
@@ -99,7 +121,7 @@ classdef Frames < handle
             if ~N
                 N=size(obj.rfm,3);
             end
-            obj.p0_recon_TR=zeros(obj.finfo.nrs,obj.finfo.nrl,N);
+            obj.p0_recon_TR=zeros(size(obj.rfm,1),size(obj.rfm,2),N);
             h = waitbar(0, 'Initialising Waitbar');
             msg='Computing time reversal...';
             for i=1:N
@@ -122,6 +144,7 @@ classdef Frames < handle
                 N=size(obj.rfm,3);
             end
             dy = obj.RF.speed_of_sound*obj.dt;
+            obj.p0_recon_FT=zeros(size(obj.rfm,1),size(obj.rfm,2),N);
             h = waitbar(0, 'Initialising Waitbar');
             msg='Computing FFT...';
             for i=1:N
@@ -129,7 +152,7 @@ classdef Frames < handle
                 disp(i/N)
                 sensor_data=obj.rfm(:,:,i);
                 obj.p0_recon_FT(:,:,i) = kspaceLineRecon(sensor_data, dy, obj.dt, ...
-                    obj.medium.sound_speed);%, 'Interp', '*linear');
+                    obj.medium.sound_speed, 'Interp', '*linear');
             end
             close(h);
             disp('Saving..');
@@ -143,16 +166,42 @@ classdef Frames < handle
             %QS1 and QS2 given in ns
             %Convert ns to data points to discard
             obj.QS1=QS1*1E-9*obj.acq.fs;
-            obj.QS2=QS2*1E-9*obj.acq.fs;            
+            obj.QS2=QS2*1E-9*obj.acq.fs;
+            
+            h = waitbar(0, 'Initialising Waitbar');
+            msg='Resampling...';
+            obj.rfm=[];
+            for i=1:2:size(obj.rfm_b,3)-1
+            waitbar(i/(size(obj.rfm_b,3)-1),h,msg);
+            obj.rfm(:,:,i)=imtranslate(obj.rfm_b(:,:,i),[0 -obj.QS1]);
+            obj.rfm(:,:,i+1)=imtranslate(obj.rfm_b(:,:,i+1),[0 -obj.QS2]);
+            end
+            obj.rfm=obj.rfm(1:end-floor(obj.QS2),:,:);
+            
+            %update Y tick labels
+            dy = obj.RF.speed_of_sound*obj.dt;
+            obj.Y = [0:dy:(obj.finfo.nrs-1)*dy]*1E3;
+            
+            close(h);      
+            
+        end
+        function Upsample(obj,N) %Upsample number of detectors
+            rfm_t = obj.rfm;
+            for i=1:size(rfm_t,2)
+                for j=1:N
+                    %nearest neighbour interpolation
+                    obj.rfm(:,N*(i-1)+j,:)=rfm_t(:,i,:);
+                end
+            end
         end
         function Save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'.mat'],'obj')
         end
         function PlotRFM (obj)
             
-            Im1=obj.rfm(10:end,:,1);
-            Im2=obj.p0_recon_TR(10:end,:,1);
-            Im3=obj.p0_recon_FT(10:end,:,1);
+            Im1=obj.rfm(:,:,1);
+            Im2=obj.p0_recon_TR(:,:,1);
+            Im3=obj.p0_recon_FT(:,:,1);
             figure;
             colormap('gray');
             
@@ -164,7 +213,7 @@ classdef Frames < handle
             subplot(1,3,2)
             imagesc(obj.X,obj.Y,Im2);
             title('Time Reversal');
-            caxis([-20 20])
+            caxis([-40 40])
             
             subplot(1,3,3)
             imagesc(obj.X,obj.Y,Im3);
