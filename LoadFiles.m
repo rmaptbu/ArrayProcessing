@@ -15,7 +15,7 @@ if ~isempty(varargin)
 end              
 %select folder
 if ~exist('pathname','var')
-    pathname = uigetdir('/Users/Thore/Documents/Transducer Measurements/160707LinArray');
+    pathname = uigetdir('C:\Users\LABPC_TB\Documents\TransducerMeasurements\201605');
 end
 %% Initialise
 %create list of folder contents
@@ -53,8 +53,8 @@ if ~isa(USFrames,'Frames')
 end
 
 %%Initialise K-Wave
-PAFrames.KWaveInit();
-USFrames.KWaveInit();
+PAFrames.KWaveInit('Upsample',1);
+USFrames.KWaveInit('Upsample',1);
 end
 
 function [frames] = LoadFrames(pathname,objname,files,...
