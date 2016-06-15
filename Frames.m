@@ -197,7 +197,7 @@ classdef Frames < handle
             end
         end
         function Save(obj) %save the object to original folder
-            save([obj.pathname,'/',obj.filename,'.mat'],'obj')
+            save([obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.mat'],'obj')
         end
         function PlotRFM (obj, varargin)
             
@@ -222,25 +222,32 @@ classdef Frames < handle
             subplot(1,3,1)
             imagesc(obj.X,obj.Y,Im1);
             title('Raw');
-            caxis([-20 20])
+            caxis([-40 40])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
             
             subplot(1,3,2)
             imagesc(obj.X,obj.Y,Im2);
             title('Time Reversal');
-            caxis([-40 40])
+            caxis([-80 80])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            
             
             subplot(1,3,3)
             imagesc(obj.X,obj.Y,Im3);
             title('Fourier Transform');
-            caxis([-20 20])
+            caxis([-40 40])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
             
             set(fig, 'Position', [100 100 800 600]);
+            
+            if SaveFig
+                figname = [obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.png'];
+                set(gcf,'PaperPositionMode','auto')
+                print(fig,figname,'-dpng','-r0')
+                close(fig);
+            end
         end
         function PlotTR (obj) 
             Im1=obj.p0_recon_TR(:,:,1);
