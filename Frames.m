@@ -69,7 +69,7 @@ classdef Frames < handle
             end
         end %Load RF data from internal backup
         function KWaveInit(obj, varargin) %Setup for k-wave toolbox
-            upsample=0;
+            upsample=1;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
                     switch varargin{input_index}
@@ -202,11 +202,14 @@ classdef Frames < handle
         function PlotRFM (obj, varargin)
             
             SaveFig = 0;
+            Average = 0;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
                     switch varargin{input_index}
                         case 'SaveFig'
                             SaveFig = varargin{input_index + 1};
+                        case 'Average'
+                            Average = varargin{input_index + 1};
                         otherwise
                             error('Unknown optional input');
                     end

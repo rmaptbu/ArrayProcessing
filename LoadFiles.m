@@ -15,7 +15,8 @@ if ~isempty(varargin)
 end              
 %select folder
 if ~exist('pathname','var')
-    pathname = uigetdir('C:\Users\LABPC_TB\Documents\TransducerMeasurements\201605');
+    pathname = uigetdir('/Users/Thore/Documents/Transducer Measurements/160707LinArray/');
+%     pathname = uigetdir('C:\Users\LABPC_TB\Documents\TransducerMeasurements\201605');
 end
 %% Initialise
 %create list of folder contents
