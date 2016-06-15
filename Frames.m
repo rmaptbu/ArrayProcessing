@@ -1,4 +1,6 @@
 classdef Frames < handle
+    %Object to handle 2D Photoacoustic Frames
+    %Thore Bucking 2016
     properties
         %settings
         finfo %File info
@@ -44,7 +46,7 @@ classdef Frames < handle
             obj.filename = filename; %name of .mat file
             
             dx = obj.RF.pitch*1E-3;
-            dy = obj.RF.speed_of_sound*obj.dt;
+            dy = obj.RF.speed_of_sound/obj.acq.fs;
             obj.X = [0:dx:(obj.finfo.nrl-1)*dx]*1E3-(obj.finfo.nrl/2)*dx*1E3;
             obj.Y = [0:dy:(obj.finfo.nrs-1)*dy]*1E3;
             
@@ -91,7 +93,7 @@ classdef Frames < handle
             
             if upsample
             %upsampling detectors to match dy...
-            N = floor(dx/dy);
+            N = ceil(dx/dy);
             dx = dx/N;
             Nx = Nx*N;
             obj.Upsample(N);
@@ -180,7 +182,7 @@ classdef Frames < handle
             
             %update Y tick labels
             dy = obj.RF.speed_of_sound*obj.dt;
-            obj.Y = [0:dy:(obj.finfo.nrs-1)*dy]*1E3;
+            obj.Y = [0:dy:(size(obj.rfm,1)-1)*dy]*1E3;
             
             close(h);      
             
@@ -197,28 +199,48 @@ classdef Frames < handle
         function Save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'.mat'],'obj')
         end
-        function PlotRFM (obj)
+        function PlotRFM (obj, varargin)
+            
+            SaveFig = 0;
+            if ~isempty(varargin)
+                for input_index = 1:2:length(varargin)
+                    switch varargin{input_index}
+                        case 'SaveFig'
+                            SaveFig = varargin{input_index + 1};
+                        otherwise
+                            error('Unknown optional input');
+                    end
+                end
+            end
             
             Im1=obj.rfm(:,:,1);
             Im2=obj.p0_recon_TR(:,:,1);
             Im3=obj.p0_recon_FT(:,:,1);
-            figure;
+            fig=figure;
             colormap('gray');
             
             subplot(1,3,1)
             imagesc(obj.X,obj.Y,Im1);
             title('Raw');
             caxis([-20 20])
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');
             
             subplot(1,3,2)
             imagesc(obj.X,obj.Y,Im2);
             title('Time Reversal');
             caxis([-40 40])
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');            
             
             subplot(1,3,3)
             imagesc(obj.X,obj.Y,Im3);
             title('Fourier Transform');
             caxis([-20 20])
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');
+            
+            set(fig, 'Position', [100 100 800 600]);
         end
         function PlotTR (obj) 
             Im1=obj.p0_recon_TR(:,:,1);
