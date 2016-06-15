@@ -161,19 +161,50 @@ classdef Frames < handle
             obj.Save()
             disp('Done.');
         end
-        function QSCorrect(obj,QS1, varargin) %Q Switch correction
+        function [QS1, QS2] = QSCorrect(obj,QS1, varargin) %Q Switch correction
             %Removes initial data points of frame pairs
             %Only necessary if acquisition is not triggered by the laser
             %output
-            %QS1 and QS2 given in ns
-            %Convert ns to data points to discard
-            obj.QS1=QS1*1E-9*obj.acq.fs;
-            if ~isempty(varargin)
-                QS2=QS1;
-            else
-                QS2=varargin{1};
+            if isempty(QS1) %accept empty input to atomatically detect delay
+                disp('Auto detect QS delay');
+                %find first point where there is no background
+                %thresholded by n sigma
+                n=5;
+                flag1=0;
+                flag2=0;
+                for i=5:size(obj.rfm_b,1)
+                    mean_fr1=mean(obj.rfm_b(1:i,end,1:2:end-1),3);
+                    mean_fr2=mean(obj.rfm_b(1:i,end,2:2:end),3);
+                    sig1=std(mean_fr1(1:end-1));
+                    sig2=std(mean_fr2(1:end-1));
+                    
+                    thresh1=n*sig1+abs(mean_fr1(end-1));
+                    thresh2=n*sig2+abs(mean_fr2(end-1));
+                    if abs(mean_fr1(end))>thresh1 && ~flag1
+                        flag1 = 1;
+                        obj.QS1=i;
+                        QS1=i/(1E-9*obj.acq.fs);
+                    end
+                    if abs(mean_fr2(end))>thresh2 && ~flag2
+                        flag2 = 1;
+                        obj.QS2=i;
+                        QS2=i/(1E-9*obj.acq.fs);
+                    end
+                    if flag1 && flag2
+                        break
+                    end
+                end
+            else   
+                %QS1 and QS2 given in ns
+                %Convert ns to data points to discard
+                obj.QS1=QS1*1E-9*obj.acq.fs;
+                if ~isempty(varargin)
+                    QS2=QS1;
+                else                    
+                    QS2=varargin{1};
+                end
+                obj.QS2=QS2*1E-9*obj.acq.fs;
             end
-            obj.QS2=QS2*1E-9*obj.acq.fs;
             
             h = waitbar(0, 'Initialising Waitbar');
             msg='Resampling...';
@@ -191,6 +222,12 @@ classdef Frames < handle
             
             close(h);      
             
+        end
+        function RemoveNoise(obj,L) %input in mm
+            %Number of initial points to set to 0
+            dy = obj.RF.speed_of_sound/obj.acq.fs*1E3;
+            N = floor(L/dy);
+            obj.rfm(1:N,:,:)=0;
         end
         function Upsample(obj,N) %Upsample number of detectors
             rfm_t = obj.rfm;
