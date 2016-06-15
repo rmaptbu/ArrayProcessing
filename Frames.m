@@ -149,12 +149,18 @@ classdef Frames < handle
             obj.p0_recon_FT=zeros(size(obj.rfm,1),size(obj.rfm,2),N);
             h = waitbar(0, 'Initialising Waitbar');
             msg='Computing FFT...';
+            dimX=size(obj.rfm(:,:,1),2);
+            dimY=size(obj.rfm(:,:,1),1);
+            padding=200;
+            sensor_data=zeros(dimY,2*padding+dimX);
             for i=1:N
                 waitbar(i/N,h,msg);
-                disp(i/N)
-                sensor_data=obj.rfm(:,:,i);
-                obj.p0_recon_FT(:,:,i) = kspaceLineRecon(sensor_data, dy, obj.dt, ...
-                    obj.medium.sound_speed, 'Interp', '*linear');
+                disp(i/N)     
+                sensor_data(:,padding+1:padding+dimX)=obj.rfm(:,:,i);
+                recon = kspaceLineRecon(sensor_data, dy, obj.dt, ...
+                    obj.medium.sound_speed, 'Interp', '*linear');  
+                
+                obj.p0_recon_FT(:,:,i) = recon(:,padding+1:padding+dimX);
             end
             close(h);
             disp('Saving..');
