@@ -161,13 +161,18 @@ classdef Frames < handle
             obj.Save()
             disp('Done.');
         end
-        function QSCorrect(obj,QS1, QS2) %Q Switch correction
+        function QSCorrect(obj,QS1, varargin) %Q Switch correction
             %Removes initial data points of frame pairs
             %Only necessary if acquisition is not triggered by the laser
             %output
             %QS1 and QS2 given in ns
             %Convert ns to data points to discard
             obj.QS1=QS1*1E-9*obj.acq.fs;
+            if ~isempty(varargin)
+                QS2=QS1;
+            else
+                QS2=varargin{1};
+            end
             obj.QS2=QS2*1E-9*obj.acq.fs;
             
             h = waitbar(0, 'Initialising Waitbar');
@@ -216,9 +221,16 @@ classdef Frames < handle
                 end
             end
             
-            Im1=obj.rfm(:,:,1);
-            Im2=obj.p0_recon_TR(:,:,1);
-            Im3=obj.p0_recon_FT(:,:,1);
+            if Average
+                Im1=mean(obj.rfm,3);
+                Im2=mean(obj.p0_recon_TR,3);
+                Im3=mean(obj.p0_recon_FT,3);
+            else
+                Im1=obj.rfm(:,:,1);
+                Im2=obj.p0_recon_TR(:,:,1);
+                Im3=obj.p0_recon_FT(:,:,1);
+            end
+            
             fig=figure;
             colormap('gray');
             
