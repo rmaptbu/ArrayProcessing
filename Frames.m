@@ -1,7 +1,7 @@
 classdef Frames < handle
     %Object to handle 2D Photoacoustic Frames
     %Thore Bucking 2016
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %Methods
     %Frames: Initialise Object
     %       -RF, finfo, acq, tran: Files from Data acquisition
@@ -31,7 +31,7 @@ classdef Frames < handle
     %       'SaveFig':Close figure, save in original folder
     %       'FigName':Specify name to save figure
     %       'Average':Plot average of all frames instead of first frame
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     properties
         %settings
         finfo %File info
@@ -181,8 +181,12 @@ classdef Frames < handle
             if ~N
                 N=size(obj.rfm,3);
             end
-            paddingX=0;%size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
-            paddingY=0;
+            paddingX=400;%size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
+            %Autodetect necessary padding in Y
+            r=obj.kgrid.dy/obj.kgrid.dx;
+            L=size(obj.rfm,1);
+            %want: (L+x)/L=r
+            paddingY=round(L*(r-1));
             save_opt = 0;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
@@ -191,6 +195,7 @@ classdef Frames < handle
                             save_opt = varargin{input_index + 1};
                         case 'Padding'
                             paddingY = varargin{input_index + 1};
+                            paddingX = varargin{input_index + 1};
                         otherwise
                             error('Unknown optional input');
                     end
@@ -333,7 +338,7 @@ classdef Frames < handle
                 Im3=obj.p0_recon_FT(:,:,1);
             end
             
-            fig=figure;
+            fig=figure('Visible','off');
             colormap('gray');
             
             subplot(1,3,1)
@@ -368,6 +373,8 @@ classdef Frames < handle
                 set(gcf,'PaperPositionMode','auto')
                 print(fig,figname,'-dpng','-r0')
                 close(fig);
+            else
+                fig.Visible='on';
             end
         end
         function PlotTR (obj) 
