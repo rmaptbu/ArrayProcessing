@@ -62,7 +62,7 @@ classdef Frames < handle
             obj.rfm_b = obj.rfm; %backup original rf matrix
         end %Read RFM files
         function LoadRFM(obj) %
-            if ~obj.rfm_b
+            if ~isempty(obj.rfm_b)
                 obj.rfm=obj.rfm_b;
             else
                 warning('There is no backup RF data stored.')
@@ -145,12 +145,16 @@ classdef Frames < handle
             if ~N
                 N=size(obj.rfm,3);
             end
-            padding=size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
+            paddingX=size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
+            paddingY=0;
+            save_opt = 0;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
                     switch varargin{input_index}
+                        case 'Save'
+                            save_opt = varargin{input_index + 1};
                         case 'Padding'
-                            padding = varargin{input_index + 1};
+                            paddingY = varargin{input_index + 1};
                         otherwise
                             error('Unknown optional input');
                     end
@@ -163,20 +167,22 @@ classdef Frames < handle
             dimX=size(obj.rfm(:,:,1),2);
             dimY=size(obj.rfm(:,:,1),1);
             
-            sensor_data=zeros(dimY,2*padding+dimX);
+            sensor_data=zeros(2*paddingY+dimY,2*paddingX+dimX);
             for i=1:N
                 waitbar(i/N,h,msg);
                 disp(i/N)     
-                sensor_data(:,padding+1:padding+dimX)=obj.rfm(:,:,i);
+                sensor_data(paddingY+1:paddingY+dimY,paddingX+1:paddingX+dimX)=obj.rfm(:,:,i);
                 recon = kspaceLineRecon(sensor_data, dy, obj.dt, ...
                     obj.medium.sound_speed, 'Interp', '*linear');  
                 
-                obj.p0_recon_FT(:,:,i) = recon(:,padding+1:padding+dimX);
+                obj.p0_recon_FT(:,:,i) = recon(paddingY+1:paddingY+dimY,paddingX+1:paddingX+dimX);
             end
             close(h);
-            disp('Saving..');
-            obj.Save()
-            disp('Done.');
+            if save_opt
+                disp('Saving..');
+                obj.Save()
+                disp('Done.');
+            end
         end
         function [QS1, QS2] = QSCorrect(obj,QS1, varargin) %Q Switch correction
             %Removes initial data points of frame pairs
