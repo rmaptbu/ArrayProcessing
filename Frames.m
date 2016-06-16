@@ -181,7 +181,7 @@ classdef Frames < handle
             if ~N
                 N=size(obj.rfm,3);
             end
-            paddingX=400;%size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
+            paddingX=1.5*size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
             %Autodetect necessary padding in Y
             r=obj.kgrid.dy/obj.kgrid.dx;
             L=size(obj.rfm,1);
