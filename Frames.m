@@ -1,6 +1,37 @@
 classdef Frames < handle
     %Object to handle 2D Photoacoustic Frames
     %Thore Bucking 2016
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %Methods
+    %Frames: Initialise Object
+    %       -RF, finfo, acq, tran: Files from Data acquisition
+    %           uses: obj.RF.speed_of_sound
+    %                 obj.RF.pitch: Pitch between detectors (mm)
+    %                 obj.finfo.nrl: Number of lines (i.e. detectors)                    
+    %                 obj.acq.fs: Sambling Frequency (Hz)
+    %ReadRFM: Load RF matrix (rfm). Attaches to rfm and copies to rfm_b.
+    %LoadRFM: Override rfm with rfm_b.
+    %KWaveInit('Upsample',N): Create K-wave settings. Upsamples number of
+    %       detectors in rfm. If N is not specified, it chooses N to be
+    %       closest to making the grid square.
+    %TR(N): Time reversal reconstruction. N=number of frames to compute.
+    %       N=0: compute all frames.
+    %FT(N, 'Padding', P): Fourier transform reconstruction. N=number of 
+    %       frames to compute. N=0: compute all frames. P is number of
+    %       pixels padded outside of frame to prevent wrapping artefacts.
+    %       Default values should be good enough.
+    %QSCorrect(QS1,QS2): Remove first QS(ns) from acquisition frame.
+    %       If QS2 is not specified, QS2=QS1.
+    %       If QS1=[], laser shot will be automatically detected
+    %       >>>Overrides rfm from rfm_b!!!
+    %RemoveNoise(L): Replace first L(mm) points of data with zeros
+    %Upsample(N): Upsamples number of detectes(multiplies by N)
+    %Save(): Save object to folder specified in the construction.
+    %PlotRFM('SaveFig','FigName','Average'): Plot data, TR, FT.
+    %       'SaveFig':Close figure, save in original folder
+    %       'FigName':Specify name to save figure
+    %       'Average':Plot average of all frames instead of first frame
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     properties
         %settings
         finfo %File info
@@ -31,8 +62,8 @@ classdef Frames < handle
         %Plots
         X %Ticks for X-axis scaling
         Y %Ticks for Y-axis scaling
-
     end
+
     methods
         function obj = Frames (finfo, acq, tran, flow_settings, ...
                 flow_rate, RF_settings, pathname, filename)
@@ -54,7 +85,7 @@ classdef Frames < handle
             obj.QS2=0;
         end
         function ReadRFM (obj, rfm)
-            if obj.rfm
+            if ~isempty(obj.rfm)
                 obj.rfm = cat(3,obj.rfm,rfm);
             else
                 obj.rfm = rfm;
@@ -69,7 +100,6 @@ classdef Frames < handle
             end
         end %Load RF data from internal backup
         function KWaveInit(obj, varargin) %Setup for k-wave toolbox
-            upsample=1;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
                     switch varargin{input_index}
@@ -91,13 +121,19 @@ classdef Frames < handle
             dx = obj.RF.pitch*1E-3;    % grid point spacing in the x direction [m]
             dy = c*obj.dt;         % grid point spacing in the y direction [m]
             
-            if upsample
+            %Upsampling
+            %If not specified, choose value to make grid as close to square
+            %as possible
+            if ~exist('upsample','var')
             %upsampling detectors to match dy...
             N = ceil(dx/dy);
+            else
+                N = upsample;
+            end
             dx = dx/N;
             Nx = Nx*N;
             obj.Upsample(N);
-            end
+
             
             obj.kgrid = makeGrid(Nx, dx, Ny, dy);
           
@@ -113,7 +149,7 @@ classdef Frames < handle
             %define the initial pressure
             obj.source.p0 = 0;
             
-            PML_size = 20;
+            PML_size = 20; %Perfectly matched layer
             obj.input_args = {'PMLInside', false, 'PMLSize', PML_size,...
                 'Smooth', false};
             
@@ -145,7 +181,7 @@ classdef Frames < handle
             if ~N
                 N=size(obj.rfm,3);
             end
-            paddingX=size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
+            paddingX=0;%size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
             paddingY=0;
             save_opt = 0;
             if ~isempty(varargin)
@@ -253,6 +289,9 @@ classdef Frames < handle
             obj.rfm(1:N,:,:)=0;
         end
         function Upsample(obj,N) %Upsample number of detectors
+            if ~N
+                error('Upsample multiplier needs to be a postive integer');
+            end
             rfm_t = obj.rfm;
             for i=1:size(rfm_t,2)
                 for j=1:N
