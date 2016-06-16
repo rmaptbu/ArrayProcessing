@@ -141,9 +141,20 @@ classdef Frames < handle
             obj.Save()
             disp('Done.');
         end
-        function FT(obj,N) %Reconstruction via fourier transform
+        function FT(obj,N,varargin) %Reconstruction via fourier transform
             if ~N
                 N=size(obj.rfm,3);
+            end
+            padding=size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
+            if ~isempty(varargin)
+                for input_index = 1:2:length(varargin)
+                    switch varargin{input_index}
+                        case 'Padding'
+                            padding = varargin{input_index + 1};
+                        otherwise
+                            error('Unknown optional input');
+                    end
+                end
             end
             dy = obj.RF.speed_of_sound*obj.dt;
             obj.p0_recon_FT=zeros(size(obj.rfm,1),size(obj.rfm,2),N);
@@ -151,7 +162,7 @@ classdef Frames < handle
             msg='Computing FFT...';
             dimX=size(obj.rfm(:,:,1),2);
             dimY=size(obj.rfm(:,:,1),1);
-            padding=200;
+            
             sensor_data=zeros(dimY,2*padding+dimX);
             for i=1:N
                 waitbar(i/N,h,msg);
@@ -251,11 +262,14 @@ classdef Frames < handle
             
             SaveFig = 0;
             Average = 0;
+            figname = 0;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
                     switch varargin{input_index}
                         case 'SaveFig'
                             SaveFig = varargin{input_index + 1};
+                        case 'FigName'
+                            figname = varargin{input_index + 1};
                         case 'Average'
                             Average = varargin{input_index + 1};
                         otherwise
@@ -301,7 +315,11 @@ classdef Frames < handle
             set(fig, 'Position', [100 100 800 600]);
             
             if SaveFig
-                figname = [obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.png'];
+                if ~figname
+                    figname = [obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.png'];
+                else
+                    figname = [obj.pathname,'/',figname,'.png'];
+                end
                 set(gcf,'PaperPositionMode','auto')
                 print(fig,figname,'-dpng','-r0')
                 close(fig);
