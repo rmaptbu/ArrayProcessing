@@ -1,6 +1,7 @@
 classdef Frames < handle
     %Object to handle 2D Photoacoustic Frames
-    %Thore Bucking 2016
+    %Thore Bücking 2016 (rmaptbu@ucl.ac.uk)
+    %Requires the K-Wave Toolbox (www.k-wave.org)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %Methods
     %Frames: Initialise Object
@@ -42,6 +43,7 @@ classdef Frames < handle
         RF %RF settings
         pathname %location of data on disk
         filename %name of object when saved
+        x_corr %Setting for cross correlation
         
         %data
         rfm %rf matrix
@@ -305,6 +307,27 @@ classdef Frames < handle
                 end
             end
         end
+        function [ImXcorr] = XCorr2D(obj) %Xcorr Im1/2 along dim1
+            Im1=obj.p0_recon_TR(:,:,1);
+            Im2=obj.p0_recon_TR(:,:,2);
+            
+            if isempty(obj.x_corr)
+                obj.x_corr.SW = 20; %Search Window
+                obj.x_corr.IW = 40; %Interrogation Window
+                obj.x_corr.SZ = 2; %Step Size
+            end
+            
+            SW = obj.x_corr.SW; 
+            IW = obj.x_corr.IW; 
+            SZ = obj.x_corr.SZ; 
+            
+            ImXcorr=zeros(SW+1,size(Im1));
+            for line=1:size(Im1,2)
+                for i=1:SZ:(size(Im1,1)-IW)
+                    ImXcorr(:,i,line)=xcorr(Im1(i:i+IW,line),Im2(i:i+IW,line),ceil(SW/2));
+                end
+            end
+        end
         function Save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.mat'],'obj')
         end
@@ -377,20 +400,27 @@ classdef Frames < handle
                 fig.Visible='on';
             end
         end
-        function PlotTR (obj) 
+        function PlotTR (obj)
             Im1=obj.p0_recon_TR(:,:,1);
             Im2=obj.p0_recon_TR(:,:,2);
+            
+            
             figure;
             colormap('gray');
-            
-            subplot(1,2,1)
             imagesc(obj.X,obj.Y,Im1);
             title('Im1');
+            caxis([-80 80])
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');
             
-            subplot(1,2,2)
+            figure;
+            colormap('gray');
             imagesc(obj.X,obj.Y,Im2);
-            title('Im2'); 
-        end
+            title('Im2');
+            caxis([-80 80])
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');
+        end          
     end
 end
 
