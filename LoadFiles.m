@@ -54,8 +54,8 @@ if ~isa(USFrames,'Frames')
 end
 
 %%Initialise K-Wave
-PAFrames.KWaveInit('Upsample',1);
-USFrames.KWaveInit('Upsample',1);
+PAFrames.KWaveInit();
+USFrames.KWaveInit();
 end
 
 function [frames] = LoadFrames(pathname,objname,files,...

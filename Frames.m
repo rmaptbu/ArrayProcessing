@@ -307,7 +307,7 @@ classdef Frames < handle
                 end
             end
         end
-        function [ImXcorr] = XCorr2D(obj) %Xcorr Im1/2 along dim1
+        function [Im_xcorr_sl] = XCorr2D(obj) %Xcorr Im1/2 along dim1
             Im1=obj.p0_recon_TR(:,:,1);
             Im2=obj.p0_recon_TR(:,:,2);
             
@@ -321,12 +321,35 @@ classdef Frames < handle
             IW = obj.x_corr.IW; 
             SZ = obj.x_corr.SZ; 
             
-            ImXcorr=zeros(SW+1,size(Im1));
+
+            tic
+            
+            n_corrs=ceil((size(Im1,1)-IW)/SZ);%number of xcorrs
+            Im1_sl=zeros([IW, size(Im1,2), n_corrs]);
+            Im2_sl=zeros([IW, size(Im1,2), n_corrs]);
+            %create array of Interrogation windows
+            %Xcorr only along that line.
+            for i=1:n_corrs
+                Im1_sl(:,:,i) = Im1((i-1)*SZ+1:(i-1)*SZ+IW,:);
+                Im2_sl(:,:,i) = Im2((i-1)*SZ+1:(i-1)*SZ+IW,:);
+            end
+            %Fourier Transform all sequences            
+            Im1_sl_fft=fft(Im1_sl,2^nextpow2(2*IW-1));
+            Im2_sl_fft=fft(Im2_sl,2^nextpow2(2*IW-1));
+            %Perform cross-correlation
+            Im_xcorr_sl = ifft(conj(Im1_sl_fft).*Im2_sl_fft);
+            Im_xcorr_sl = real(Im_xcorr_sl);
+            toc
+
+            tic
+            ImXcorr=zeros([2*IW+1, size(Im1,2), n_corrs]);
             for line=1:size(Im1,2)
-                for i=1:SZ:(size(Im1,1)-IW)
-                    ImXcorr(:,i,line)=xcorr(Im1(i:i+IW,line),Im2(i:i+IW,line),ceil(SW/2));
+                for i=1:SZ:(size(Im1,1)-IW)                    
+                    ImXcorr(:,line,i)=xcorr(Im1(i:i+IW,line),Im2(i:i+IW,line));
                 end
             end
+            toc
+
         end
         function Save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.mat'],'obj')
@@ -420,7 +443,8 @@ classdef Frames < handle
             caxis([-80 80])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
-        end          
+        end
+        
     end
 end
 
