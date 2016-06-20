@@ -27,6 +27,13 @@ classdef Frames < handle
     %       >>>Overrides rfm from rfm_b!!! Need to redo KWaveInit!
     %RemoveNoise(L): Replace first L(mm) points of data with zeros
     %Upsample(N): Upsamples number of detectes(multiplies by N)
+    %XCorr2D(Im1,Im2,'InterrogationWindow','SearchWindow','StepSize'):
+    %       Perform CrossCorrelation Im1/Im2 along columns
+    %       xcorrs Windows of 'InterrogationWindow' Size
+    %       Moves window with steps of size 'StepSize'
+    %       Output Xcorr limited to 'SearchWindow' Size
+    %       If no inputs specifed, it will take info from member 'x_corr'
+    %       Otherwise, member 'x_corr' will be overwritten.
     %Save(): Save object to folder specified in the construction.
     %PlotRFM('SaveFig','FigName','Average'): Plot data, TR, FT.
     %       'SaveFig':Close figure, save in original folder
