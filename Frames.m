@@ -307,22 +307,39 @@ classdef Frames < handle
                 end
             end
         end
-        function [Im_xcorr_sl,ImXcorr] = XCorr2D(obj) %Xcorr Im1/2 along dim1
-            Im1=obj.p0_recon_TR(:,:,1);
-            Im2=obj.p0_recon_TR(:,:,2);
+        function [Im_xcorr_sl] = XCorr2D(obj, Im1, Im2, varargin) %Xcorr Im1/2 along dim1
+            %             Im1=obj.p0_recon_TR(:,:,1);
+            %             Im2=obj.p0_recon_TR(:,:,2);
             
-%             if isempty(obj.x_corr)
-                obj.x_corr.SW = 20; %Search Window
+            %Pass Arguments, setup variables
+            if isempty(obj.x_corr)
+                obj.x_corr.SW = 32; %Search Window
                 obj.x_corr.IW = 64; %Interrogation Window
-                obj.x_corr.SZ = 2; %Step Size
-%             end
-            
-            SW = obj.x_corr.SW; 
-            IW = obj.x_corr.IW; 
-            SZ = obj.x_corr.SZ;           
+                obj.x_corr.SZ = 1; %Step Size
+            end            
+            SW = obj.x_corr.SW;
+            IW = obj.x_corr.IW;
+            SZ = obj.x_corr.SZ; 
+            if ~isempty(varargin)
+                for input_index = 1:2:length(varargin)
+                    switch varargin{input_index}
+                        case 'SearchWindow'
+                            SW = varargin{input_index + 1};
+                            obj.x_corr.SW = SW;
+                        case 'InterrogationWindow'
+                            IW = varargin{input_index + 1};
+                            obj.x_corr.IW = IW;
+                        case 'StepSize'
+                            SZ = varargin{input_index + 1};
+                            obj.x_corr.SZ = SZ;
+                        otherwise
+                            error('Unknown optional input');
+                    end
+                end
+            end
+            sw = floor(SW/2);
 
-            tic
-            
+            %Cross Correlation--------------------------------
             n_corrs=ceil((size(Im1,1)-IW)/SZ);%number of xcorrs
             Im1_sl=zeros([IW, size(Im1,2), n_corrs]);
             Im2_sl=zeros([IW, size(Im1,2), n_corrs]);
@@ -333,25 +350,24 @@ classdef Frames < handle
                 Im2_sl(:,:,i) = Im2((i-1)*SZ+1:(i-1)*SZ+IW,:);
             end
             %Fourier Transform all sequences  
-            disp(['window length: ',num2str(size(Im1_sl,1))]);
             Im1_sl_fft=fft(Im1_sl,2^nextpow2(2*IW-1));
             Im2_sl_fft=fft(Im2_sl,2^nextpow2(2*IW-1));
             %Perform cross-correlation
-            Im_xcorr_sl = ifft(conj(Im1_sl_fft).*Im2_sl_fft);
+            Im_xcorr_sl = ifft(Im1_sl_fft.*conj(Im2_sl_fft));
             Im_xcorr_sl = real(Im_xcorr_sl);
             %Reorder and only keep search window
-            Im_xcorr_sl = [Im_xcorr_sl(end-IW+2:end,:,:);Im_xcorr_sl(1:IW,:,:)];
-            toc
+            Im_xcorr_sl = [Im_xcorr_sl(end-sw+2:end,:,:);Im_xcorr_sl(1:sw,:,:)];
 
-            tic
-            ImXcorr=zeros([2*IW-1, size(Im1,2), n_corrs]);
-            for line=1:size(Im1,2)
-                for i=1:SZ:(size(Im1,1)-IW)  
-                    ImXcorr(:,line,((i-1)/SZ)+1)=xcorr(Im1(i:i+IW-1,line),Im2(i:i+IW-1,line));
-                end
-            end
-%             ImXcorr(:,line,((i-1)/SZ)+1)=xcorr(Im1(i:i+IW-1,line),Im2(i:i+IW-1,line));
-            toc
+
+            %slow xcorr for comparison. Should give the same result...
+%             tic
+%             ImXcorr=zeros([2*IW-1, size(Im1,2), n_corrs]);
+%             for line=1:size(Im1,2)
+%                 for i=1:SZ:(size(Im1,1)-IW)  
+%                     ImXcorr(:,line,((i-1)/SZ)+1)=xcorr(Im1(i:i+IW-1,line),Im2(i:i+IW-1,line));
+%                 end
+%             end
+%             toc
 
         end
         function Save(obj) %save the object to original folder
