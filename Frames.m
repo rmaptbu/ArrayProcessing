@@ -39,6 +39,9 @@ classdef Frames < handle
     %       'SaveFig':Close figure, save in original folder
     %       'FigName':Specify name to save figure
     %       'Average':Plot average of all frames instead of first frame
+    %PlotXC('SaveFig','FigName'): Plot Reconstrct, Xcorr_disp, Xcorr_amp.
+    %       'SaveFig':Close figure, save in original folder
+    %       'FigName':Specify name to save figure
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     properties
         %settings
