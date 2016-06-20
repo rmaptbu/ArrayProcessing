@@ -24,7 +24,7 @@ classdef Frames < handle
     %QSCorrect(QS1,QS2): Remove first QS(ns) from acquisition frame.
     %       If QS2 is not specified, QS2=QS1.
     %       If QS1=[], laser shot will be automatically detected
-    %       >>>Overrides rfm from rfm_b!!! Need to redo KWaveInit!
+    %       !!!>>>Overrides rfm from rfm_b<<<!!! It will do KWaveInit()!
     %RemoveNoise(L): Replace first L(mm) points of data with zeros
     %Upsample(N): Upsamples number of detectes(multiplies by N)
     %XCorr2D(Im1,Im2,'InterrogationWindow','SearchWindow','StepSize'):
@@ -71,6 +71,7 @@ classdef Frames < handle
         %Plots
         X %Ticks for X-axis scaling
         Y %Ticks for Y-axis scaling
+        Y_xc %Ticks for Y-axis scaling of xcorrs
     end
 
     methods
@@ -293,7 +294,9 @@ classdef Frames < handle
             dy = obj.RF.speed_of_sound*obj.dt;
             obj.Y = [0:dy:(size(obj.rfm,1)-1)*dy]*1E3;
             
-            close(h);      
+            close(h); 
+            %Redo KWaveInit because of changed sample size
+            obj.KWaveInit();
             
         end
         function RemoveNoise(obj,L) %input in mm
@@ -376,6 +379,40 @@ classdef Frames < handle
 %             end
 %             toc
 
+            %Create Time basis for xcorr
+            dy = SZ*obj.RF.speed_of_sound/obj.acq.fs;
+            Y0 = IW/2*dy;
+            Yend = Y0+(n_corrs-1)*dy;
+            obj.Y_xc = Y0:dy:Yend;
+
+        end
+        function [xc_disp xc_amp] = FindShift(xc_sl)
+            %Takes output from Xcorr2D and finds position and amplitude of
+            %maxima
+            %xc_sl(xcorr>columns,rows,step)
+            [M, I] = max(xc_sl,[],1);
+            M = squeeze(M);
+            I = squeeze(I);
+            
+            t=t*obj.dt;
+            %map of time points
+            for i=1:size(I,1)
+                %create 100+100 points around maximum data point
+                %if I=1 then peak is at centre. i.e. need to shift by one
+                %to get rid of offset (peak at I-1 in absolute time)
+                tI(i,:) = (I(i)-w-2):1.0/100:(I(i)-w);
+                tI(i,:) = obj.dt*tI(i,:);
+                xcorr_interp(i,:) = ... %100 point interpolation
+                    interp1(t,xc_sl(:,i),tI(i,:),'spline');
+            end
+            [~,max_pos]=max(xcorr_interp');
+            for i=1:size(max_pos,2)
+                xcorr_peak_pos(i)=tI(i,max_pos(i));
+            end
+            
+            profile=xcorr_peak_pos';
+            obj.profile = profile;
+            obj.xcorrwindows_ensemble = xcorrwindows_ensemble;
         end
         function Save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.mat'],'obj')
