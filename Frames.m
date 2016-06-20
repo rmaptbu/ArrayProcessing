@@ -24,7 +24,7 @@ classdef Frames < handle
     %QSCorrect(QS1,QS2): Remove first QS(ns) from acquisition frame.
     %       If QS2 is not specified, QS2=QS1.
     %       If QS1=[], laser shot will be automatically detected
-    %       >>>Overrides rfm from rfm_b!!!
+    %       >>>Overrides rfm from rfm_b!!! Need to redo KWaveInit!
     %RemoveNoise(L): Replace first L(mm) points of data with zeros
     %Upsample(N): Upsamples number of detectes(multiplies by N)
     %Save(): Save object to folder specified in the construction.
@@ -307,20 +307,19 @@ classdef Frames < handle
                 end
             end
         end
-        function [Im_xcorr_sl] = XCorr2D(obj) %Xcorr Im1/2 along dim1
+        function [Im_xcorr_sl,ImXcorr] = XCorr2D(obj) %Xcorr Im1/2 along dim1
             Im1=obj.p0_recon_TR(:,:,1);
             Im2=obj.p0_recon_TR(:,:,2);
             
-            if isempty(obj.x_corr)
+%             if isempty(obj.x_corr)
                 obj.x_corr.SW = 20; %Search Window
-                obj.x_corr.IW = 40; %Interrogation Window
+                obj.x_corr.IW = 64; %Interrogation Window
                 obj.x_corr.SZ = 2; %Step Size
-            end
+%             end
             
             SW = obj.x_corr.SW; 
             IW = obj.x_corr.IW; 
-            SZ = obj.x_corr.SZ; 
-            
+            SZ = obj.x_corr.SZ;           
 
             tic
             
@@ -333,21 +332,25 @@ classdef Frames < handle
                 Im1_sl(:,:,i) = Im1((i-1)*SZ+1:(i-1)*SZ+IW,:);
                 Im2_sl(:,:,i) = Im2((i-1)*SZ+1:(i-1)*SZ+IW,:);
             end
-            %Fourier Transform all sequences            
+            %Fourier Transform all sequences  
+            disp(['window length: ',num2str(size(Im1_sl,1))]);
             Im1_sl_fft=fft(Im1_sl,2^nextpow2(2*IW-1));
             Im2_sl_fft=fft(Im2_sl,2^nextpow2(2*IW-1));
             %Perform cross-correlation
             Im_xcorr_sl = ifft(conj(Im1_sl_fft).*Im2_sl_fft);
             Im_xcorr_sl = real(Im_xcorr_sl);
+            %Reorder and only keep search window
+            Im_xcorr_sl = [Im_xcorr_sl(end-IW+2:end,:,:);Im_xcorr_sl(1:IW,:,:)];
             toc
 
             tic
-            ImXcorr=zeros([2*IW+1, size(Im1,2), n_corrs]);
+            ImXcorr=zeros([2*IW-1, size(Im1,2), n_corrs]);
             for line=1:size(Im1,2)
-                for i=1:SZ:(size(Im1,1)-IW)                    
-                    ImXcorr(:,line,i)=xcorr(Im1(i:i+IW,line),Im2(i:i+IW,line));
+                for i=1:SZ:(size(Im1,1)-IW)  
+                    ImXcorr(:,line,((i-1)/SZ)+1)=xcorr(Im1(i:i+IW-1,line),Im2(i:i+IW-1,line));
                 end
             end
+%             ImXcorr(:,line,((i-1)/SZ)+1)=xcorr(Im1(i:i+IW-1,line),Im2(i:i+IW-1,line));
             toc
 
         end
