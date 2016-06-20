@@ -374,10 +374,10 @@ classdef Frames < handle
 
             %slow xcorr for comparison. Should give the same result...
 %             tic
-%             ImXcorr=zeros([2*IW-1, size(Im1,2), n_corrs]);
+%             Im_xcorr_sl=zeros([2*IW-1, size(Im1,2), n_corrs]);
 %             for line=1:size(Im1,2)
 %                 for i=1:SZ:(size(Im1,1)-IW)  
-%                     ImXcorr(:,line,((i-1)/SZ)+1)=xcorr(Im1(i:i+IW-1,line),Im2(i:i+IW-1,line));
+%                     Im_xcorr_sl(:,line,((i-1)/SZ)+1)=xcorr(Im1(i:i+IW-1,line),Im2(i:i+IW-1,line));
 %                 end
 %             end
 %             toc
@@ -391,9 +391,13 @@ classdef Frames < handle
         end
         function EnsembleCorrelation(obj,N)
             assert(N<=size(obj.p0_recon_FT,3));
+            assert(rem(size(obj.p0_recon_FT,3),2)==0);
             obj.x_corr.IW=64;
             obj.x_corr.SW=32;
             obj.x_corr.SZ=1;
+            temp=obj.XCorr2D(obj.p0_recon_FT(:,:,1),obj.p0_recon_FT(:,:,2));
+            n_corrs=size(obj.p0_recon_FT,3)/2;
+            xc_stack=zeros([size(temp),n_corrs]);
         end        
         function FindShift(obj)
             %Takes output from Xcorr2D and finds position and amplitude of
