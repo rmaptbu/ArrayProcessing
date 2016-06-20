@@ -59,6 +59,9 @@ classdef Frames < handle
         p0_recon_FT %reconstruction using fourier transform
         QS1 %number of initial points to discard: Frame 1
         QS2 %number of initial points to discard: Frame 2
+        xc_raw %Raw ensemble cross correlation
+        xc_disp %cross correlation displacement map
+        xc_amp %cross correlation amplitude map
         
         %k-Wave settings
         kgrid
@@ -386,33 +389,33 @@ classdef Frames < handle
             obj.Y_xc = Y0:dy:Yend;
 
         end
-        function [xc_disp xc_amp] = FindShift(xc_sl)
+        function EnsembleCorrelation(obj,N)
+            assert(N<=size(obj.p0_recon_FT,3));
+            obj.x_corr.IW=64;
+            obj.x_corr.SW=32;
+            obj.x_corr.SZ=1;
+        end        
+        function FindShift(obj)
             %Takes output from Xcorr2D and finds position and amplitude of
             %maxima
-            %xc_sl(xcorr>columns,rows,step)
-            [M, I] = max(xc_sl,[],1);
+            xc_sl = obj.xcorrs;
+            %xc_sl(xcorr>rows,columns,step)
+            res = 100; %interpolate to 2 significant digits
+            assert(rem(size(xc_sl,1),2)~=0) %odd number of elements in colums
+                            
+            dy = obj.RF.speed_of_sound/obj.acq.fs;
+            L = (size(xc_sl,1)-1)/2;
+            y = (-L:L)*dy;
+            yi = (-L:1/res:L)*dy;
+            
+            xc_i = interp1(y,xc_sl,yi,'spline');
+            [M, I] = max(xc_i,[],1);            
             M = squeeze(M);
             I = squeeze(I);
             
-            t=t*obj.dt;
-            %map of time points
-            for i=1:size(I,1)
-                %create 100+100 points around maximum data point
-                %if I=1 then peak is at centre. i.e. need to shift by one
-                %to get rid of offset (peak at I-1 in absolute time)
-                tI(i,:) = (I(i)-w-2):1.0/100:(I(i)-w);
-                tI(i,:) = obj.dt*tI(i,:);
-                xcorr_interp(i,:) = ... %100 point interpolation
-                    interp1(t,xc_sl(:,i),tI(i,:),'spline');
-            end
-            [~,max_pos]=max(xcorr_interp');
-            for i=1:size(max_pos,2)
-                xcorr_peak_pos(i)=tI(i,max_pos(i));
-            end
-            
-            profile=xcorr_peak_pos';
-            obj.profile = profile;
-            obj.xcorrwindows_ensemble = xcorrwindows_ensemble;
+            obj.xc_disp = yi(I)';
+            obj.xc_amp = M';
+
         end
         function Save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.mat'],'obj')
@@ -476,6 +479,68 @@ classdef Frames < handle
             if SaveFig
                 if ~figname
                     figname = [obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.png'];
+                else
+                    figname = [obj.pathname,'/',figname,'.png'];
+                end
+                set(gcf,'PaperPositionMode','auto')
+                print(fig,figname,'-dpng','-r0')
+                close(fig);
+            else
+                fig.Visible='on';
+            end
+        end
+        function PlotXC (obj, varargin)
+            
+            SaveFig = 0;
+            figname = 0;
+            if ~isempty(varargin)
+                for input_index = 1:2:length(varargin)
+                    switch varargin{input_index}
+                        case 'SaveFig'
+                            SaveFig = varargin{input_index + 1};
+                        case 'FigName'
+                            figname = varargin{input_index + 1};
+                        otherwise
+                            error('Unknown optional input');
+                    end
+                end
+            end            
+            
+            if ~isempty(obj.p0_recon_TR)
+                Im1=mean(obj.p0_recon_TR,3);
+            else
+                Im1=mean(obj.p0_recon_FT,3);
+            end
+            Im2=obj.xc_disp;
+            Im3=obj.xc_amp;
+            
+            fig=figure('Visible','off');
+            colormap('gray');
+            
+            subplot(1,3,1)
+            imagesc(obj.X,obj.Y,Im1);
+            title('Reconstruction');
+            caxis([-80 80])
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');
+            
+            subplot(1,3,2)
+            imagesc(obj.X,obj.Y_xc,Im2);
+            title('X-Corr Displacement');
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');            
+            
+            subplot(1,3,3)
+            imagesc(obj.X,obj.Y_xc,Im3);
+            title('X-Corr Amplitude');
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');
+            
+            set(fig, 'Position', [100 100 800 600]);
+            
+            if SaveFig
+                if ~figname
+                    figname = [obj.pathname,'/',obj.filename,'_xcorr.png'];
                 else
                     figname = [obj.pathname,'/',figname,'.png'];
                 end
