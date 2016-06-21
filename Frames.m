@@ -556,7 +556,9 @@ classdef Frames < handle
             imagesc(obj.X,obj.Y_xc,Im2);
             title('X-Corr Displacement');
             xlabel('Lateral (mm)');
-            ylabel('Depth (mm)');            
+            ylabel('Depth (mm)');
+            load('cm_surf.mat');
+            colormap(cm_surf);
             
             subplot(1,3,3)
             imagesc(obj.X,obj.Y_xc,Im3);
