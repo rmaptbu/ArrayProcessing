@@ -7,7 +7,7 @@ classdef Frames < handle
     %Example usage:
     %1.)obj.ReadRFM(rfm) >> Read Data rfm(rows,col,frames)
     %   |obj.QSCorrect([]) >> Autodetect Laser firing
-    %2.)|OR
+    %2.)|OR (if timing is already correct)
     %   |obj.KWaveInit() >> Prepare K-Wave settings 
     %3.)obj.FT(0) >> reconstruct all frames using fourier transfrom  
     %4.)obj.PlotRFM() >> Make sure Reconstruction worked
@@ -441,14 +441,18 @@ classdef Frames < handle
             %Takes output from Xcorr2D and finds position and amplitude of
             %maxima
             xc = obj.xc_raw;
-            %xc_sl(xcorr>rows,columns,step)
+            %xc(xcorr>rows,columns,step)
             res = 100; %interpolate to 2 significant digits
             assert(rem(size(xc,1),2)~=0) %odd number of elements in colums
-                            
+                                   
             dy = obj.RF.speed_of_sound/obj.acq.fs;
+            T = obj.acq.ftime*1E-6; %delay between pulses (seconds)
+            theta = obj.flw.theta;
+            dv = (dy/(T*cos(theta)))*1E3; %mm/s
+            
             L = (size(xc,1)-1)/2;
-            y = (-L:L)*dy;
-            yi = (-L:1/res:L)*dy;
+            y = (-L:L)*dv;
+            yi = (-L:1/res:L)*dv;
             
             disp('Interpolating Cross-Correlations...');
             xc_i = interp1(y,xc,yi,'spline');
@@ -558,6 +562,11 @@ classdef Frames < handle
             Im2=obj.xc_disp;
             Im3=obj.xc_amp;
             
+            %find flowrate in mm/s         
+            d=obj.flw.tube_diameter; %(mm)
+            A=pi*(d/2)^2;
+            v=obj.flw_r/A*10;
+            
             fig=figure('Visible','off');
             colormap('gray');
             
@@ -574,6 +583,7 @@ classdef Frames < handle
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
             load('cm_surf.mat');
+            caxis([-2*v 2*v])
             colormap(cm_surf);
             
             subplot(1,3,3)
