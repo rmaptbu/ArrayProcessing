@@ -1,7 +1,16 @@
 classdef Frames < handle
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %Object to handle 2D Photoacoustic Frames
     %Thore Bücking 2016 (rmaptbu@ucl.ac.uk)
     %Requires the K-Wave Toolbox (www.k-wave.org)
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %Example usage:
+    %1.)obj.ReadRFM(rfm) >> Read Data rfm(rows,col,frames)
+    %   ||obj.QSCorrect([]) >> Autdodect Laser firing
+    %2.)||OR
+    %   ||obj.KWaveInit() >> Prepare K-Wave settings 
+    %3.)obj.FT(0) >> reconstruct all frames using fourier transfrom
+    %4.)obj.EnsembleCorrelation('FT')
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %Methods
     %Frames: Initialise Object
@@ -34,6 +43,9 @@ classdef Frames < handle
     %       Output Xcorr limited to 'SearchWindow' Size
     %       If no inputs specifed, it will take info from member 'x_corr'
     %       Otherwise, member 'x_corr' will be overwritten.
+    %EnsembleCorrelation(obj,type): type='FT' or 'TR'.Ensemble Correlat all
+    %       frames of type (TR reconstr. or FT reconstr.). Saves output in 
+    %       xc_disp and xc_amp (displacement and amplitude respectively).
     %Save(): Save object to folder specified in the construction.
     %PlotRFM('SaveFig','FigName','Average'): Plot data, TR, FT.
     %       'SaveFig':Close figure, save in original folder
