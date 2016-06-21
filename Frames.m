@@ -392,20 +392,39 @@ classdef Frames < handle
             obj.Y_xc = Y0:dy:Yend;
 
         end
-        function EnsembleCorrelation(obj,N)
-            assert(N<=size(obj.p0_recon_FT,3));
-            assert(rem(size(obj.p0_recon_FT,3),2)==0);
+        function EnsembleCorrelation(obj,type)
+            switch type
+                case 'FT'
+                    im_stack=obj.p0_recon_FT;
+                case 'TR'
+                    im_stack=obj.p0_recon_TR;
+                otherwise
+                    error ('Unkown Type: Select FT or TR')
+            end
+            assert(rem(size(im_stack,3),2)==0);
             obj.x_corr.IW=64;
             obj.x_corr.SW=32;
             obj.x_corr.SZ=1;
-            temp=obj.XCorr2D(obj.p0_recon_FT(:,:,1),obj.p0_recon_FT(:,:,2));
-            n_corrs=size(obj.p0_recon_FT,3)/2;
-            xc_stack=zeros([size(temp),n_corrs]);
+            temp=obj.XCorr2D(im_stack(:,:,1),im_stack(:,:,2));
+            n_corrs=size(im_stack,3)/2;
+            xc_stack=zeros([size(temp),n_corrs]);            
+            h = waitbar(0, 'Initialising Waitbar');
+            msg='Calculating Cross-Correlations...';
+            for i = 1:2:size(im_stack,3)-1
+                waitbar(i/(size(im_stack,3)-1),h,msg);
+                xc_stack(:,:,:,(i+1)/2) = obj.XCorr2D(im_stack(:,:,i),im_stack(:,:,i+1));
+            end
+            close(h);
+            
+            %ensemble correlations:
+            obj.xc_raw=squeeze(mean(xc_stack,4));
+            
+            
         end        
         function FindShift(obj)
             %Takes output from Xcorr2D and finds position and amplitude of
             %maxima
-            xc_sl = obj.xcorrs;
+            xc_sl = obj.xc_raw;
             %xc_sl(xcorr>rows,columns,step)
             res = 100; %interpolate to 2 significant digits
             assert(rem(size(xc_sl,1),2)~=0) %odd number of elements in colums
@@ -415,10 +434,12 @@ classdef Frames < handle
             y = (-L:L)*dy;
             yi = (-L:1/res:L)*dy;
             
+            disp('Interpolating Cross-Correlations...');
             xc_i = interp1(y,xc_sl,yi,'spline');
             [M, I] = max(xc_i,[],1);            
             M = squeeze(M);
             I = squeeze(I);
+            disp('Done.');
             
             obj.xc_disp = yi(I)';
             obj.xc_amp = M';
