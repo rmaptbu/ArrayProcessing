@@ -6,11 +6,13 @@ classdef Frames < handle
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %Example usage:
     %1.)obj.ReadRFM(rfm) >> Read Data rfm(rows,col,frames)
-    %   ||obj.QSCorrect([]) >> Autdodect Laser firing
-    %2.)||OR
-    %   ||obj.KWaveInit() >> Prepare K-Wave settings 
-    %3.)obj.FT(0) >> reconstruct all frames using fourier transfrom
-    %4.)obj.EnsembleCorrelation('FT')
+    %   |obj.QSCorrect([]) >> Autodetect Laser firing
+    %2.)|OR
+    %   |obj.KWaveInit() >> Prepare K-Wave settings 
+    %3.)obj.FT(0) >> reconstruct all frames using fourier transfrom  
+    %4.)obj.PlotRFM() >> Make sure Reconstruction worked
+    %5.)obj.EnsembleCorrelation('FT') >> Create Cross-Correlation Map
+    %6.)obj.PlotXC() >> View Result
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %Methods
     %Frames: Initialise Object
@@ -43,9 +45,12 @@ classdef Frames < handle
     %       Output Xcorr limited to 'SearchWindow' Size
     %       If no inputs specifed, it will take info from member 'x_corr'
     %       Otherwise, member 'x_corr' will be overwritten.
-    %EnsembleCorrelation(obj,type): type='FT' or 'TR'.Ensemble Correlat all
-    %       frames of type (TR reconstr. or FT reconstr.). Saves output in 
-    %       xc_disp and xc_amp (displacement and amplitude respectively).
+    %EnsembleCorrelation(obj,type): type='FT' or 'TR'.Ensemble Correlate 
+    %       all frames of type (TR reconstr. or FT reconstr.). Saves output 
+    %       in xc_raw 
+    %FindShift(): Take xc_raw and extract displacement and amplitude
+    %       information in xc_disp and xc_amp (displacement and amplitude 
+    %       respectively).
     %Save(): Save object to folder specified in the construction.
     %PlotRFM('SaveFig','FigName','Average'): Plot data, TR, FT.
     %       'SaveFig':Close figure, save in original folder
@@ -430,24 +435,23 @@ classdef Frames < handle
             
             %ensemble correlations:
             obj.xc_raw=squeeze(mean(xc_stack,4));
-            
-            
+            obj.Findshift();   
         end        
         function FindShift(obj)
             %Takes output from Xcorr2D and finds position and amplitude of
             %maxima
-            xc_sl = obj.xc_raw;
+            xc = obj.xc_raw;
             %xc_sl(xcorr>rows,columns,step)
             res = 100; %interpolate to 2 significant digits
-            assert(rem(size(xc_sl,1),2)~=0) %odd number of elements in colums
+            assert(rem(size(xc,1),2)~=0) %odd number of elements in colums
                             
             dy = obj.RF.speed_of_sound/obj.acq.fs;
-            L = (size(xc_sl,1)-1)/2;
+            L = (size(xc,1)-1)/2;
             y = (-L:L)*dy;
             yi = (-L:1/res:L)*dy;
             
             disp('Interpolating Cross-Correlations...');
-            xc_i = interp1(y,xc_sl,yi,'spline');
+            xc_i = interp1(y,xc,yi,'spline');
             [M, I] = max(xc_i,[],1);            
             M = squeeze(M);
             I = squeeze(I);
