@@ -245,11 +245,9 @@ classdef Frames < handle
             obj.KWaveInit();
             
         end 
-        function RemoveNoise(obj,L) %input in mm
-            %Number of initial points to set to 0
-            dy = obj.RF.speed_of_sound/obj.acq.fs*1E3;
-            N = floor(L/dy);
-            obj.rfm(1:N,:,:)=0;
+        function Detrend(obj) 
+            %Remove mean of each row (normalise rows)
+            obj.rfm=bsxfun(@minus,obj.rfm,mean(obj.rfm,1));       
         end
         %Reconstruction
         function TR(obj,N) %Reconstruction via time reversal
@@ -329,6 +327,8 @@ classdef Frames < handle
                     im_stack=obj.p0_recon_FT;
                 case 'TR'
                     im_stack=obj.p0_recon_TR;
+                case 'Raw'
+                    im_stack=obj.rfm;
                 otherwise
                     error ('Unkown Type: Select FT or TR')
             end
