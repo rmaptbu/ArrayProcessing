@@ -180,6 +180,70 @@ classdef Frames < handle
             
 
         end
+        function [QS1, QS2] = QSCorrect(obj,QS1, varargin) %Q Switch correction
+            %Removes initial data points of frame pairs
+            %Only necessary if acquisition is not triggered by the laser
+            %output
+            if isempty(QS1) %accept empty input to atomatically detect delay
+                disp('Auto detect QS delay');
+                %find first point where there is no background
+                %thresholded by n sigma
+                n=5;
+                flag1=0;
+                flag2=0;
+                for i=5:size(obj.rfm_b,1)
+                    mean_fr1=mean(obj.rfm_b(1:i,end,1:2:end-1),3);
+                    mean_fr2=mean(obj.rfm_b(1:i,end,2:2:end),3);
+                    sig1=std(mean_fr1(1:end-1));
+                    sig2=std(mean_fr2(1:end-1));
+                    
+                    thresh1=n*sig1+abs(mean_fr1(end-1));
+                    thresh2=n*sig2+abs(mean_fr2(end-1));
+                    if abs(mean_fr1(end))>thresh1 && ~flag1
+                        flag1 = 1;
+                        obj.QS1=i;
+                        QS1=i/(1E-9*obj.acq.fs);
+                    end
+                    if abs(mean_fr2(end))>thresh2 && ~flag2
+                        flag2 = 1;
+                        obj.QS2=i;
+                        QS2=i/(1E-9*obj.acq.fs);
+                    end
+                    if flag1 && flag2
+                        break
+                    end
+                end
+            else   
+                %QS1 and QS2 given in ns
+                %Convert ns to data points to discard
+                obj.QS1=QS1*1E-9*obj.acq.fs;
+                if ~isempty(varargin)
+                    QS2=QS1;
+                else                    
+                    QS2=varargin{1};
+                end
+                obj.QS2=QS2*1E-9*obj.acq.fs;
+            end
+            
+            h = waitbar(0, 'Initialising Waitbar');
+            msg='Resampling...';
+            obj.rfm=[];
+            for i=1:2:size(obj.rfm_b,3)-1
+            waitbar(i/(size(obj.rfm_b,3)-1),h,msg);
+            obj.rfm(:,:,i)=imtranslate(obj.rfm_b(:,:,i),[0 -obj.QS1]);
+            obj.rfm(:,:,i+1)=imtranslate(obj.rfm_b(:,:,i+1),[0 -obj.QS2]);
+            end
+            obj.rfm=obj.rfm(1:end-floor(obj.QS2),:,:);
+            
+            %update Y tick labels
+            dy = obj.RF.speed_of_sound*obj.dt;
+            obj.Y = (0:dy:(size(obj.rfm,1)-1)*dy)*1E3;
+            
+            close(h); 
+            %Redo KWaveInit because of changed sample size
+            obj.KWaveInit();
+            
+        end   
         function TR(obj,N) %Reconstruction via time reversal
             if ~N
                 N=size(obj.rfm,3);
@@ -249,89 +313,13 @@ classdef Frames < handle
                 obj.Save()
                 disp('Done.');
             end
-        end
-        function [QS1, QS2] = QSCorrect(obj,QS1, varargin) %Q Switch correction
-            %Removes initial data points of frame pairs
-            %Only necessary if acquisition is not triggered by the laser
-            %output
-            if isempty(QS1) %accept empty input to atomatically detect delay
-                disp('Auto detect QS delay');
-                %find first point where there is no background
-                %thresholded by n sigma
-                n=5;
-                flag1=0;
-                flag2=0;
-                for i=5:size(obj.rfm_b,1)
-                    mean_fr1=mean(obj.rfm_b(1:i,end,1:2:end-1),3);
-                    mean_fr2=mean(obj.rfm_b(1:i,end,2:2:end),3);
-                    sig1=std(mean_fr1(1:end-1));
-                    sig2=std(mean_fr2(1:end-1));
-                    
-                    thresh1=n*sig1+abs(mean_fr1(end-1));
-                    thresh2=n*sig2+abs(mean_fr2(end-1));
-                    if abs(mean_fr1(end))>thresh1 && ~flag1
-                        flag1 = 1;
-                        obj.QS1=i;
-                        QS1=i/(1E-9*obj.acq.fs);
-                    end
-                    if abs(mean_fr2(end))>thresh2 && ~flag2
-                        flag2 = 1;
-                        obj.QS2=i;
-                        QS2=i/(1E-9*obj.acq.fs);
-                    end
-                    if flag1 && flag2
-                        break
-                    end
-                end
-            else   
-                %QS1 and QS2 given in ns
-                %Convert ns to data points to discard
-                obj.QS1=QS1*1E-9*obj.acq.fs;
-                if ~isempty(varargin)
-                    QS2=QS1;
-                else                    
-                    QS2=varargin{1};
-                end
-                obj.QS2=QS2*1E-9*obj.acq.fs;
-            end
-            
-            h = waitbar(0, 'Initialising Waitbar');
-            msg='Resampling...';
-            obj.rfm=[];
-            for i=1:2:size(obj.rfm_b,3)-1
-            waitbar(i/(size(obj.rfm_b,3)-1),h,msg);
-            obj.rfm(:,:,i)=imtranslate(obj.rfm_b(:,:,i),[0 -obj.QS1]);
-            obj.rfm(:,:,i+1)=imtranslate(obj.rfm_b(:,:,i+1),[0 -obj.QS2]);
-            end
-            obj.rfm=obj.rfm(1:end-floor(obj.QS2),:,:);
-            
-            %update Y tick labels
-            dy = obj.RF.speed_of_sound*obj.dt;
-            obj.Y = (0:dy:(size(obj.rfm,1)-1)*dy)*1E3;
-            
-            close(h); 
-            %Redo KWaveInit because of changed sample size
-            obj.KWaveInit();
-            
-        end
+        end        
         function RemoveNoise(obj,L) %input in mm
             %Number of initial points to set to 0
             dy = obj.RF.speed_of_sound/obj.acq.fs*1E3;
             N = floor(L/dy);
             obj.rfm(1:N,:,:)=0;
         end
-        function Upsample(obj,N) %Upsample number of detectors
-            if ~N
-                error('Upsample multiplier needs to be a postive integer');
-            end
-            rfm_t = obj.rfm;
-            for i=1:size(rfm_t,2)
-                for j=1:N
-                    %nearest neighbour interpolation
-                    obj.rfm(:,N*(i-1)+j,:)=rfm_t(:,i,:);
-                end
-            end
-        end 
         function EnsembleCorrelation(obj,type)
             switch type
                 case 'FT'
@@ -367,38 +355,7 @@ classdef Frames < handle
             Y0 = x_corr.IW/2*dy;
             Yend = Y0+(size(temp,3)-1)*dy;
             obj.Y_xc = (Y0:dy:Yend)*1E3;
-        end
-        function FindShift(obj)
-            %Takes output from Xcorr2D and finds position and amplitude of
-            %maxima
-            xc = obj.xc_raw;
-            %xc(xcorr>rows,columns,step)
-            res = 100; %interpolate to 2 significant digits
-            assert(rem(size(xc,1),2)~=0) %odd number of elements in colums
-                                   
-            dy = obj.RF.speed_of_sound/obj.acq.fs;
-            T = obj.acq.ftime*1E-6; %delay between pulses (seconds)
-            theta = obj.flw.theta;
-            dv = (dy/(T*cos(theta)))*1E3; %mm/s
-            
-            L = (size(xc,1)-1)/2;
-            y = (-L:L)*dv;
-            yi = (-L:1/res:L)*dv;
-            
-            disp('Interpolating Cross-Correlations...');
-            xc_i = interp1(y,xc,yi,'spline');
-            [M, I] = max(xc_i,[],1);            
-            M = squeeze(M);
-            I = squeeze(I);
-            disp('Done.');
-            
-            obj.xc_disp = yi(I)';
-            obj.xc_amp = M';
-
-        end
-        function Save(obj) %save the object to original folder
-            save([obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.mat'],'obj')
-        end
+        end        
         function PlotRFM (obj, varargin)
             
             SaveFig = 0;
@@ -553,7 +510,50 @@ classdef Frames < handle
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
         end
-        
+        %helper methods     
+        function Upsample(obj,N) %Upsample number of detectors
+            if ~N
+                error('Upsample multiplier needs to be a postive integer');
+            end
+            rfm_t = obj.rfm;
+            for i=1:size(rfm_t,2)
+                for j=1:N
+                    %nearest neighbour interpolation
+                    obj.rfm(:,N*(i-1)+j,:)=rfm_t(:,i,:);
+                end
+            end
+        end         
+        function Save(obj) %save the object to original folder
+            save([obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.mat'],'obj')
+        end
+        function FindShift(obj)
+            %Takes output from Xcorr2D and finds position and amplitude of
+            %maxima
+            xc = obj.xc_raw;
+            %xc(xcorr>rows,columns,step)
+            res = 100; %interpolate to 2 significant digits
+            assert(rem(size(xc,1),2)~=0) %odd number of elements in colums
+                                   
+            dy = obj.RF.speed_of_sound/obj.acq.fs;
+            T = obj.acq.ftime*1E-6; %delay between pulses (seconds)
+            theta = obj.flw.theta;
+            dv = (dy/(T*cos(theta)))*1E3; %mm/s
+            
+            L = (size(xc,1)-1)/2;
+            y = (-L:L)*dv;
+            yi = (-L:1/res:L)*dv;
+            
+            disp('Interpolating Cross-Correlations...');
+            xc_i = interp1(y,xc,yi,'spline');
+            [M, I] = max(xc_i,[],1);            
+            M = squeeze(M);
+            I = squeeze(I);
+            disp('Done.');
+            
+            obj.xc_disp = yi(I)';
+            obj.xc_amp = M';
+
+        end
     end
 end
 
