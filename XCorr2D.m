@@ -1,4 +1,5 @@
 function [Im_xcorr_sl] = XCorr2D(Im1, Im2, x_corr, varargin) %Xcorr Im1/2 along dim1
+%Perform CrossCorrelation Im1/Im2 along columns of size IW.
 
 %Pass Arguments, setup variables
 SW = x_corr.SW;

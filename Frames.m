@@ -38,13 +38,6 @@ classdef Frames < handle
     %       !!!>>>Overrides rfm from rfm_b<<<!!! It will do KWaveInit()!
     %RemoveNoise(L): Replace first L(mm) points of data with zeros
     %Upsample(N): Upsamples number of detectes(multiplies by N)
-    %XCorr2D(Im1,Im2,'InterrogationWindow','SearchWindow','StepSize'):
-    %       Perform CrossCorrelation Im1/Im2 along columns
-    %       xcorrs Windows of 'InterrogationWindow' Size
-    %       Moves window with steps of size 'StepSize'
-    %       Output Xcorr limited to 'SearchWindow' Size
-    %       If no inputs specifed, it will take info from member 'x_corr'
-    %       Otherwise, member 'x_corr' will be overwritten.
     %EnsembleCorrelation(obj,type): type='FT' or 'TR'.Ensemble Correlate 
     %       all frames of type (TR reconstr. or FT reconstr.). Saves output 
     %       in xc_raw 
@@ -110,8 +103,8 @@ classdef Frames < handle
             
             dx = obj.RF.pitch*1E-3;
             dy = obj.RF.speed_of_sound/obj.acq.fs;
-            obj.X = [0:dx:(obj.finfo.nrl-1)*dx]*1E3-(obj.finfo.nrl/2)*dx*1E3;
-            obj.Y = [0:dy:(obj.finfo.nrs-1)*dy]*1E3;
+            obj.X = (0:dx:(obj.finfo.nrl-1)*dx)*1E3-(obj.finfo.nrl/2)*dx*1E3;
+            obj.Y = (0:dy:(obj.finfo.nrs-1)*dy)*1E3;
             
             obj.QS1=0;
             obj.QS2=0;
@@ -314,7 +307,7 @@ classdef Frames < handle
             
             %update Y tick labels
             dy = obj.RF.speed_of_sound*obj.dt;
-            obj.Y = [0:dy:(size(obj.rfm,1)-1)*dy]*1E3;
+            obj.Y = (0:dy:(size(obj.rfm,1)-1)*dy)*1E3;
             
             close(h); 
             %Redo KWaveInit because of changed sample size
@@ -491,12 +484,7 @@ classdef Frames < handle
                     end
                 end
             end            
-            
-            if ~isempty(obj.p0_recon_TR)
-                Im1=mean(obj.p0_recon_TR,3);
-            else
-                Im1=mean(obj.p0_recon_FT,3);
-            end
+
             Im2=obj.xc_disp;
             Im3=obj.xc_amp;
             
