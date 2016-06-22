@@ -352,7 +352,8 @@ classdef Frames < handle
             end            
             SW = obj.x_corr.SW;
             IW = obj.x_corr.IW;
-            SZ = obj.x_corr.SZ; 
+            SZ = obj.x_corr.SZ;
+            unbiased = 1; %default to scaling xcorr for unbiased
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
                     switch varargin{input_index}
@@ -365,12 +366,14 @@ classdef Frames < handle
                         case 'StepSize'
                             SZ = varargin{input_index + 1};
                             obj.x_corr.SZ = SZ;
+                        case 'unbiased'
+                            unbiased = varargin{input_index + 1};
                         otherwise
                             error('Unknown optional input');
                     end
                 end
             end
-            sw = floor(SW/2);
+            sw = ceil(SW/2);
 
             %Cross Correlation--------------------------------
             n_corrs=ceil((size(Im1,1)-IW)/SZ);%number of xcorrs
@@ -390,23 +393,33 @@ classdef Frames < handle
             Im_xcorr_sl = real(Im_xcorr_sl);
             %Reorder and only keep search window
             Im_xcorr_sl = [Im_xcorr_sl(end-sw+2:end,:,:);Im_xcorr_sl(1:sw,:,:)];
-
-
+            
+            
             %slow xcorr for comparison. Should give the same result...
-%             tic
-%             Im_xcorr_sl=zeros([2*IW-1, size(Im1,2), n_corrs]);
-%             for line=1:size(Im1,2)
-%                 for i=1:SZ:(size(Im1,1)-IW)  
-%                     Im_xcorr_sl(:,line,((i-1)/SZ)+1)=xcorr(Im1(i:i+IW-1,line),Im2(i:i+IW-1,line));
-%                 end
-%             end
-%             toc
-
+            %             tic
+            %             Im_xcorr_sl=zeros([2*IW-1, size(Im1,2), n_corrs]);
+            %             for line=1:size(Im1,2)
+            %                 for i=1:SZ:(size(Im1,1)-IW)
+            %                     Im_xcorr_sl(:,line,((i-1)/SZ)+1)=xcorr(Im1(i:i+IW-1,line),Im2(i:i+IW-1,line));
+            %                 end
+            %             end
+            %             toc
+            
+            if unbiased
+                %Scale for bias in finite length xcorr
+                maxlag=IW-1;
+                lags = -maxlag:maxlag;
+                scale = (IW-abs(lags))';
+                scale = scale(IW-sw+1:IW+sw-1);
+                scale = repmat(scale,[1,size(Im_xcorr_sl,2),size(Im_xcorr_sl,3)]);          
+                Im_xcorr_sl = Im_xcorr_sl./scale;
+            end
+            
             %Create Time basis for xcorr
             dy = SZ*obj.RF.speed_of_sound/obj.acq.fs;
             Y0 = IW/2*dy;
             Yend = Y0+(n_corrs-1)*dy;
-            obj.Y_xc = Y0:dy:Yend;
+            obj.Y_xc = (Y0:dy:Yend)*1E3;
 
         end
         function EnsembleCorrelation(obj,type)
@@ -435,7 +448,7 @@ classdef Frames < handle
             
             %ensemble correlations:
             obj.xc_raw=squeeze(mean(xc_stack,4));
-            obj.Findshift();   
+            obj.FindShift();   
         end        
         function FindShift(obj)
             %Takes output from Xcorr2D and finds position and amplitude of
@@ -567,30 +580,29 @@ classdef Frames < handle
             A=pi*(d/2)^2;
             v=obj.flw_r/A*10;
             
-            fig=figure('Visible','off');
-            colormap('gray');
+            fig=figure('Visible','off');            
             
-            subplot(1,3,1)
-            imagesc(obj.X,obj.Y,Im1);
-            title('Reconstruction');
-            caxis([-80 80])
-            xlabel('Lateral (mm)');
-            ylabel('Depth (mm)');
-            
-            subplot(1,3,2)
+            sb1 = subplot(1,2,1);
             imagesc(obj.X,obj.Y_xc,Im2);
-            title('X-Corr Displacement');
+            title(['Flow Speed: ',num2str(v),'mm/s']);
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
             load('cm_surf.mat');
             caxis([-2*v 2*v])
-            colormap(cm_surf);
+            colormap(sb1,cm_surf);
+            c=colorbar;
+            ylabel(c,'Flow Speed (mm/s)');
             
-            subplot(1,3,3)
+            sb2 = subplot(1,2,2);
             imagesc(obj.X,obj.Y_xc,Im3);
-            title('X-Corr Amplitude');
+            title('X-Corr Amplitude (a.u.)');
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
+            colormap(sb2,'gray');
+            cmin=min(min(Im3(50:end,:)));
+            cmax=max(max(Im3(50:end,:)));
+            caxis([cmin cmax])
+            colorbar;
             
             set(fig, 'Position', [100 100 800 600]);
             
