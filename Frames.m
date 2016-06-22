@@ -70,7 +70,6 @@ classdef Frames < handle
         RF %RF settings
         pathname %location of data on disk
         filename %name of object when saved
-        x_corr %Setting for cross correlation
         
         %data
         rfm %rf matrix
@@ -339,89 +338,7 @@ classdef Frames < handle
                     obj.rfm(:,N*(i-1)+j,:)=rfm_t(:,i,:);
                 end
             end
-        end
-        function [Im_xcorr_sl] = XCorr2D(obj, Im1, Im2, varargin) %Xcorr Im1/2 along dim1
-            %             Im1=obj.p0_recon_TR(:,:,1);
-            %             Im2=obj.p0_recon_TR(:,:,2);
-            
-            %Pass Arguments, setup variables
-            if isempty(obj.x_corr)
-                obj.x_corr.SW = 32; %Search Window
-                obj.x_corr.IW = 64; %Interrogation Window
-                obj.x_corr.SZ = 1; %Step Size
-            end            
-            SW = obj.x_corr.SW;
-            IW = obj.x_corr.IW;
-            SZ = obj.x_corr.SZ;
-            unbiased = 1; %default to scaling xcorr for unbiased
-            if ~isempty(varargin)
-                for input_index = 1:2:length(varargin)
-                    switch varargin{input_index}
-                        case 'SearchWindow'
-                            SW = varargin{input_index + 1};
-                            obj.x_corr.SW = SW;
-                        case 'InterrogationWindow'
-                            IW = varargin{input_index + 1};
-                            obj.x_corr.IW = IW;
-                        case 'StepSize'
-                            SZ = varargin{input_index + 1};
-                            obj.x_corr.SZ = SZ;
-                        case 'unbiased'
-                            unbiased = varargin{input_index + 1};
-                        otherwise
-                            error('Unknown optional input');
-                    end
-                end
-            end
-            sw = ceil(SW/2);
-
-            %Cross Correlation--------------------------------
-            n_corrs=ceil((size(Im1,1)-IW)/SZ);%number of xcorrs
-            Im1_sl=zeros([IW, size(Im1,2), n_corrs]);
-            Im2_sl=zeros([IW, size(Im1,2), n_corrs]);
-            %create array of Interrogation windows
-            %Xcorr only along that line.
-            for i=1:n_corrs
-                Im1_sl(:,:,i) = Im1((i-1)*SZ+1:(i-1)*SZ+IW,:);
-                Im2_sl(:,:,i) = Im2((i-1)*SZ+1:(i-1)*SZ+IW,:);
-            end
-            %Fourier Transform all sequences  
-            Im1_sl_fft=fft(Im1_sl,2^nextpow2(2*IW-1));
-            Im2_sl_fft=fft(Im2_sl,2^nextpow2(2*IW-1));
-            %Perform cross-correlation
-            Im_xcorr_sl = ifft(Im1_sl_fft.*conj(Im2_sl_fft));
-            Im_xcorr_sl = real(Im_xcorr_sl);
-            %Reorder and only keep search window
-            Im_xcorr_sl = [Im_xcorr_sl(end-sw+2:end,:,:);Im_xcorr_sl(1:sw,:,:)];
-            
-            
-            %slow xcorr for comparison. Should give the same result...
-            %             tic
-            %             Im_xcorr_sl=zeros([2*IW-1, size(Im1,2), n_corrs]);
-            %             for line=1:size(Im1,2)
-            %                 for i=1:SZ:(size(Im1,1)-IW)
-            %                     Im_xcorr_sl(:,line,((i-1)/SZ)+1)=xcorr(Im1(i:i+IW-1,line),Im2(i:i+IW-1,line));
-            %                 end
-            %             end
-            %             toc
-            
-            if unbiased
-                %Scale for bias in finite length xcorr
-                maxlag=IW-1;
-                lags = -maxlag:maxlag;
-                scale = (IW-abs(lags))';
-                scale = scale(IW-sw+1:IW+sw-1);
-                scale = repmat(scale,[1,size(Im_xcorr_sl,2),size(Im_xcorr_sl,3)]);          
-                Im_xcorr_sl = Im_xcorr_sl./scale;
-            end
-            
-            %Create Time basis for xcorr
-            dy = SZ*obj.RF.speed_of_sound/obj.acq.fs;
-            Y0 = IW/2*dy;
-            Yend = Y0+(n_corrs-1)*dy;
-            obj.Y_xc = (Y0:dy:Yend)*1E3;
-
-        end
+        end 
         function EnsembleCorrelation(obj,type)
             switch type
                 case 'FT'
@@ -432,24 +349,32 @@ classdef Frames < handle
                     error ('Unkown Type: Select FT or TR')
             end
             assert(rem(size(im_stack,3),2)==0);
-            obj.x_corr.IW=64;
-            obj.x_corr.SW=32;
-            obj.x_corr.SZ=1;
-            temp=obj.XCorr2D(im_stack(:,:,1),im_stack(:,:,2));
+            
+            x_corr.IW=64;
+            x_corr.SW=32;
+            x_corr.SZ=1;
+            
+            temp=XCorr2D(im_stack(:,:,1),im_stack(:,:,2),x_corr);
             n_corrs=size(im_stack,3)/2;
             xc_stack=zeros([size(temp),n_corrs]);            
             h = waitbar(0, 'Initialising Waitbar');
             msg='Calculating Cross-Correlations...';
             for i = 1:2:size(im_stack,3)-1
                 waitbar(i/(size(im_stack,3)-1),h,msg);
-                xc_stack(:,:,:,(i+1)/2) = obj.XCorr2D(im_stack(:,:,i),im_stack(:,:,i+1));
+                xc_stack(:,:,:,(i+1)/2) = XCorr2D(im_stack(:,:,i),im_stack(:,:,i+1),x_corr);
             end
             close(h);
             
             %ensemble correlations:
             obj.xc_raw=squeeze(mean(xc_stack,4));
             obj.FindShift();   
-        end        
+            
+            %Create Time basis for xcorr
+            dy = x_corr.SZ*obj.RF.speed_of_sound/obj.acq.fs;
+            Y0 = x_corr.IW/2*dy;
+            Yend = Y0+(size(temp,3)-1)*dy;
+            obj.Y_xc = (Y0:dy:Yend)*1E3;
+        end
         function FindShift(obj)
             %Takes output from Xcorr2D and finds position and amplitude of
             %maxima
