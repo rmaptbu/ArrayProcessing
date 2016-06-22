@@ -109,6 +109,7 @@ classdef Frames < handle
             obj.QS1=0;
             obj.QS2=0;
         end
+        %Prepare Object
         function ReadRFM (obj, rfm)
             if ~isempty(obj.rfm)
                 obj.rfm = cat(3,obj.rfm,rfm);
@@ -243,7 +244,14 @@ classdef Frames < handle
             %Redo KWaveInit because of changed sample size
             obj.KWaveInit();
             
-        end   
+        end 
+        function RemoveNoise(obj,L) %input in mm
+            %Number of initial points to set to 0
+            dy = obj.RF.speed_of_sound/obj.acq.fs*1E3;
+            N = floor(L/dy);
+            obj.rfm(1:N,:,:)=0;
+        end
+        %Reconstruction
         function TR(obj,N) %Reconstruction via time reversal
             if ~N
                 N=size(obj.rfm,3);
@@ -314,12 +322,7 @@ classdef Frames < handle
                 disp('Done.');
             end
         end        
-        function RemoveNoise(obj,L) %input in mm
-            %Number of initial points to set to 0
-            dy = obj.RF.speed_of_sound/obj.acq.fs*1E3;
-            N = floor(L/dy);
-            obj.rfm(1:N,:,:)=0;
-        end
+        %Correlation
         function EnsembleCorrelation(obj,type)
             switch type
                 case 'FT'
@@ -355,7 +358,8 @@ classdef Frames < handle
             Y0 = x_corr.IW/2*dy;
             Yend = Y0+(size(temp,3)-1)*dy;
             obj.Y_xc = (Y0:dy:Yend)*1E3;
-        end        
+        end   
+        %Graphical output
         function PlotRFM (obj, varargin)
             
             SaveFig = 0;
