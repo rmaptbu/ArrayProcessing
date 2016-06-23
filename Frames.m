@@ -256,7 +256,7 @@ classdef Frames < handle
             obj.QSCorrect([]);
             obj.Detrend();
             obj.FT(5);
-            obj.Highpass(5);
+            obj.Highpass(5,1);
 %             obj.Wallfilter();
             obj.PlotRFM('Filter',1)            
             obj.EnsembleCorrelation();
@@ -338,11 +338,10 @@ classdef Frames < handle
         function Wallfilter(obj)
             obj.p0_recon=bsxfun(@minus,obj.p0_recon,mean(obj.p0_recon,3));
         end
-        function Highpass(obj,frequency) %enter in MHz
+        function Highpass(obj,Fp,Fst) %enter in MHz: Passband, Stopband
             %pass band frequency in rad/sample
-            frequency = frequency*1E6;
-            Fp=frequency;
-            Fst = Fp/5;            
+            Fp = Fp*1E6;
+            Fst = Fst*1E6;            
             hd = designfilt('highpassiir','StopbandFrequency',Fst, ...
                 'PassbandFrequency',Fp,'PassbandRipple',0.2, ...
                 'SampleRate',obj.acq.fs);
