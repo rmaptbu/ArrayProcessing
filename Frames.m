@@ -67,6 +67,7 @@ classdef Frames < handle
         %data
         rfm %rf matrix
         rfm_b %backup of rfm matrix
+        p0_recon
         p0_recon_TR %reconstruction using time reversal
         p0_recon_FT %reconstruction using fourier transform
         QS1 %number of initial points to discard: Frame 1
@@ -211,6 +212,7 @@ classdef Frames < handle
                         QS2=i/(1E-9*obj.acq.fs);
                     end
                     if flag1 && flag2
+                        
                         break
                     end
                 end
@@ -249,6 +251,16 @@ classdef Frames < handle
             %Remove mean of each row (normalise rows)
             obj.rfm=bsxfun(@minus,obj.rfm,mean(obj.rfm,1));       
         end
+        function Init(obj)
+            obj.LoadRFM;
+            obj.QSCorrect([]);
+            obj.Detrend();
+            obj.FT(2);
+            obj.Highpass(4);
+            obj.PlotRFM('Filter',1)
+%             obj.Wallfilter();
+%             obj.EnsembleCorrelation();
+        end
         %Reconstruction
         function TR(obj,N) %Reconstruction via time reversal
             if ~N
@@ -271,6 +283,7 @@ classdef Frames < handle
             disp('Saving..');
             obj.Save()
             disp('Done.');
+            obj.p0_recon = obj.p0_recon_TR;
         end
         function FT(obj,N,varargin) %Reconstruction via fourier transform
             if ~N
@@ -319,18 +332,40 @@ classdef Frames < handle
                 obj.Save()
                 disp('Done.');
             end
-        end        
+            obj.p0_recon = obj.p0_recon_FT;
+        end
+        %Filter
+        function Wallfilter(obj)
+            obj.p0_recon=bsxfun(@minus,obj.p0_recon,mean(obj.p0_recon,3));
+        end
+        function Highpass(obj,frequency) %enter in MHz
+            %pass band frequency in rad/sample
+            frequency = frequency*1E6;
+            Fp=frequency; 
+            Fp=Fp*2*pi/obj.acq.fs; %sampling in samples per microscond
+            %stop band frequency in rad/sample
+            Fst=frequency/2; %in Mhz
+            Fst=Fst*2*pi/obj.acq.fs;
+            d = fdesign.highpass('Fst,Fp,Ast,Ap',Fst,Fp,60,1);
+            hd = design(d,'butter');
+            %Apply filter
+            obj.p0_recon = filter(hd,obj.p0_recon);
+        end
         %Correlation
-        function EnsembleCorrelation(obj,type)
-            switch type
-                case 'FT'
-                    im_stack=obj.p0_recon_FT;
-                case 'TR'
-                    im_stack=obj.p0_recon_TR;
-                case 'Raw'
-                    im_stack=obj.rfm;
-                otherwise
-                    error ('Unkown Type: Select FT or TR')
+        function EnsembleCorrelation(obj,varargin)
+            if isempty(varargin)
+                im_stack = obj.p0_recon;
+            else
+                switch varargin{1}
+                    case 'FT'
+                        im_stack=obj.p0_recon_FT;
+                    case 'TR'
+                        im_stack=obj.p0_recon_TR;
+                    case 'Raw'
+                        im_stack=obj.rfm;
+                    otherwise
+                        error ('Unkown Type: Select FT or TR')
+                end
             end
             assert(rem(size(im_stack,3),2)==0);
             
@@ -365,6 +400,7 @@ classdef Frames < handle
             SaveFig = 0;
             Average = 0;
             figname = 0;
+            filt = 0;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
                     switch varargin{input_index}
@@ -374,6 +410,8 @@ classdef Frames < handle
                             figname = varargin{input_index + 1};
                         case 'Average'
                             Average = varargin{input_index + 1};
+                        case 'Filter'
+                            filt = varargin{input_index + 1};
                         otherwise
                             error('Unknown optional input');
                     end
@@ -383,11 +421,22 @@ classdef Frames < handle
             if Average
                 Im1=mean(obj.rfm,3);
                 Im2=mean(obj.p0_recon_TR,3);
+                title1='Avg Time Reversal';
                 Im3=mean(obj.p0_recon_FT,3);
-            else
+                title2='Avg Fourier Transform';
+            else                
                 Im1=obj.rfm(:,:,1);
-                Im2=obj.p0_recon_TR(:,:,1);
-                Im3=obj.p0_recon_FT(:,:,1);
+                if filt
+                    Im2=obj.p0_recon_FT(:,:,1);
+                    title1='Unfiltered Reconstruction';
+                    Im3=obj.p0_recon(:,:,1);
+                    title2='Filtered Reconstruction';
+                else
+                    Im2=obj.p0_recon_TR(:,:,1);
+                    title1='Time Reversal';
+                    Im3=obj.p0_recon_FT(:,:,1);
+                    title2='Fourier Transform';
+                end
             end
             
             fig=figure('Visible','off');
@@ -398,19 +447,24 @@ classdef Frames < handle
             title('Raw');
             caxis([-40 40])
             xlabel('Lateral (mm)');
-            ylabel('Depth (mm)');
+            ylabel('Depth (mm)');            
             
             subplot(1,3,2)
             imagesc(obj.X,obj.Y,Im2);
-            title('Time Reversal');
+            title(title1);
             caxis([-80 80])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            
             
             subplot(1,3,3)
             imagesc(obj.X,obj.Y,Im3);
-            title('Fourier Transform');
+            title(title2);            
+            if ~filt
+            caxis([-80 80])
+            else
             caxis([-40 40])
+            end
+
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
             
