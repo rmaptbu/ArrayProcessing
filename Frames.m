@@ -255,11 +255,11 @@ classdef Frames < handle
             obj.LoadRFM;
             obj.QSCorrect([]);
             obj.Detrend();
-            obj.FT(2);
-            obj.Highpass(4);
-            obj.PlotRFM('Filter',1)
+            obj.FT(5);
+            obj.Highpass(5);
 %             obj.Wallfilter();
-%             obj.EnsembleCorrelation();
+            obj.PlotRFM('Filter',1)            
+            obj.EnsembleCorrelation();
         end
         %Reconstruction
         function TR(obj,N) %Reconstruction via time reversal
@@ -341,15 +341,13 @@ classdef Frames < handle
         function Highpass(obj,frequency) %enter in MHz
             %pass band frequency in rad/sample
             frequency = frequency*1E6;
-            Fp=frequency; 
-            Fp=Fp*2*pi/obj.acq.fs; %sampling in samples per microscond
-            %stop band frequency in rad/sample
-            Fst=frequency/2; %in Mhz
-            Fst=Fst*2*pi/obj.acq.fs;
-            d = fdesign.highpass('Fst,Fp,Ast,Ap',Fst,Fp,60,1);
-            hd = design(d,'butter');
+            Fp=frequency;
+            Fst = Fp/5;            
+            hd = designfilt('highpassiir','StopbandFrequency',Fst, ...
+                'PassbandFrequency',Fp,'PassbandRipple',0.2, ...
+                'SampleRate',obj.acq.fs);
             %Apply filter
-            obj.p0_recon = filter(hd,obj.p0_recon);
+            obj.p0_recon = filtfilt(hd,obj.p0_recon);
         end
         %Correlation
         function EnsembleCorrelation(obj,varargin)
