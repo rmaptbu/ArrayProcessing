@@ -351,8 +351,26 @@ classdef Frames < handle
             obj.p0_recon = obj.p0_recon_FT;
         end
         %Filter
+        function LoadRecon(obj,varargin)
+            if ~isempty(varargin)
+                switch varargin{1}
+                    case 'FT'
+                        obj.p0_recon = obj.p0_recon_FT;
+                    case 'TR'
+                        obj.p0_recon = obj.p0_recon_TR;
+                    otherwise
+                        error('Unknown optional input');
+                end
+            else
+                obj.p0_recon = obj.p0_recon_FT;
+            end
+            
+        end
         function Wallfilter(obj)
-            obj.p0_recon=bsxfun(@minus,obj.p0_recon,mean(obj.p0_recon,3));
+            obj.p0_recon(:,:,1:2:end-1)=bsxfun(@minus,...
+                obj.p0_recon(:,:,1:2:end-1),mean(obj.p0_recon(:,:,1:2:end-1),3));
+            obj.p0_recon(:,:,2:2:end)=bsxfun(@minus,...
+                obj.p0_recon(:,:,2:2:end),mean(obj.p0_recon(:,:,2:2:end),3));
         end
         function Highpass(obj,Fp,Fst) %enter in MHz: Passband, Stopband
             %pass band frequency in rad/sample
@@ -468,7 +486,7 @@ classdef Frames < handle
             subplot(1,3,2)
             imagesc(obj.X,obj.Y,Im2);
             title(title1);
-            caxis([-80 80])
+            caxis([-40 40])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            
             
@@ -600,7 +618,7 @@ classdef Frames < handle
         function Save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.mat'],'obj')
         end
-        function [xc_displacement, xc_amplitude] =FindShift(obj, varargin)
+        function [xc_displacement, xc_amplitude] = FindShift(obj, varargin)
             %Takes output from Xcorr2D and finds position and amplitude of
             %maxima
             if isempty(varargin)
