@@ -216,7 +216,22 @@ classdef Frames < handle
                         break
                     end
                 end
-            else   
+                Im1=imtranslate(obj.rfm_b(:,:,1),[0 -obj.QS1]);
+                Im2=imtranslate(obj.rfm_b(:,:,2),[0 -obj.QS2]);
+                x_corr.IW=64;
+                x_corr.SW=32;
+                x_corr.SZ=1;
+                [Im_xcorr_sl] = XCorr2D(Im1, Im2, x_corr);
+                [xc_displacement,~] = obj.FindShift(Im_xcorr_sl);
+                
+                dy = obj.RF.speed_of_sound/obj.acq.fs;
+                T = obj.acq.ftime*1E-6; %delay between pulses (seconds)
+                theta = obj.flw.theta;
+                dv = (dy/(T*cos(theta)))*1E3; %mm/s                
+                QS_offset=median(median(xc_displacement(1:25,1:30)))/dv;
+
+                obj.QS2 = obj.QS2-QS_offset;
+            else
                 %QS1 and QS2 given in ns
                 %Convert ns to data points to discard
                 obj.QS1=QS1*1E-9*obj.acq.fs;
@@ -255,11 +270,12 @@ classdef Frames < handle
             obj.LoadRFM;
             obj.QSCorrect([]);
             obj.Detrend();
-            obj.FT(6);
+            obj.FT(0);
 %             obj.Highpass(5);
-%             obj.Wallfilter();
+            obj.Wallfilter();
             obj.PlotRFM('Filter',1)            
             obj.EnsembleCorrelation();
+            obj.PlotXC();
         end
         %Reconstruction
         function TR(obj,N) %Reconstruction via time reversal
@@ -547,9 +563,9 @@ classdef Frames < handle
                 fig.Visible='on';
             end
         end
-        function PlotTR (obj)
-            Im1=obj.p0_recon_TR(:,:,1);
-            Im2=obj.p0_recon_TR(:,:,2);
+        function PlotFT (obj)
+            Im1=obj.p0_recon_FT(:,:,1);
+            Im2=obj.p0_recon_FT(:,:,2);
             
             
             figure;
@@ -584,10 +600,14 @@ classdef Frames < handle
         function Save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.mat'],'obj')
         end
-        function FindShift(obj)
+        function [xc_displacement, xc_amplitude] =FindShift(obj, varargin)
             %Takes output from Xcorr2D and finds position and amplitude of
             %maxima
-            xc = obj.xc_raw;
+            if isempty(varargin)
+                xc = obj.xc_raw;
+            else
+                xc = varargin{1};
+            end
             %xc(xcorr>rows,columns,step)
             res = 100; %interpolate to 2 significant digits
             assert(rem(size(xc,1),2)~=0) %odd number of elements in colums
@@ -608,8 +628,14 @@ classdef Frames < handle
             I = squeeze(I);
             disp('Done.');
             
-            obj.xc_disp = yi(I)';
-            obj.xc_amp = M';
+            if isempty(varargin)
+                obj.xc_disp = yi(I)';
+                obj.xc_amp = M';
+            else
+                xc_displacement = yi(I)';
+                xc_amplitude = M';
+            end
+
 
         end
     end
