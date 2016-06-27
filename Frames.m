@@ -255,8 +255,8 @@ classdef Frames < handle
             obj.LoadRFM;
             obj.QSCorrect([]);
             obj.Detrend();
-            obj.FT(5);
-            obj.Highpass(5,1);
+            obj.FT(6);
+%             obj.Highpass(5);
 %             obj.Wallfilter();
             obj.PlotRFM('Filter',1)            
             obj.EnsembleCorrelation();
@@ -383,7 +383,10 @@ classdef Frames < handle
             
             %ensemble correlations:
             obj.xc_raw=squeeze(mean(xc_stack,4));
-            obj.FindShift();   
+            obj.FindShift();
+            %deconvolve xcorr amplitude
+            kernel=ones(x_corr.IW,1);
+            obj.xc_amp = deconvlucy(obj.xc_amp,kernel);
             
             %Create Time basis for xcorr
             dy = x_corr.SZ*obj.RF.speed_of_sound/obj.acq.fs;
