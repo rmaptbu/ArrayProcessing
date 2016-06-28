@@ -72,9 +72,14 @@ classdef Frames < handle
         p0_recon_FT %reconstruction using fourier transform
         QS1 %number of initial points to discard: Frame 1
         QS2 %number of initial points to discard: Frame 2
+        
+        %cross correlation results
         xc_raw %Raw ensemble cross correlation
         xc_disp %cross correlation displacement map
         xc_amp %cross correlation amplitude map
+        xc_mask
+        xc_flw %calculated flow speed
+        xc_flw_std %standard deviation of flow speed
         
         %k-Wave settings
         kgrid
@@ -428,6 +433,33 @@ classdef Frames < handle
             Yend = Y0+(size(temp,3)-1)*dy;
             obj.Y_xc = (Y0:dy:Yend)*1E3;
         end   
+        %Compute Flow
+        function FindFlow(obj, varargin)
+            %Parse inputs
+            cut = 30; %throw away first 30 pixels
+            if ~isempty(varargin)
+                for input_index = 1:2:length(varargin)
+                    switch varargin{input_index}
+                        case 'LaserNoise'
+                            cut = varargin{input_index + 1}; %in mm
+                            dy = obj.RF.speed_of_sound*obj.dt*1E3;
+                            cut = cut/dy; %mm to pixels
+                        otherwise
+                            error('Unknown optional input');
+                    end
+                end
+            end
+            %find mask
+            m = max(max(obj.xc_amp(cut:end,:)));
+            m = m/4;
+            obj.xc_mask = obj.xc_amp>m;
+            obj.xc_mask(1:cut,:) = false;
+            
+            x = obj.xc_disp(obj.xc_mask);
+            obj.xc_flw = median(x);
+            obj.xc_flw_std = std(x);
+            
+        end
         %Graphical output
         function PlotRFM (obj, varargin)
             
@@ -435,22 +467,7 @@ classdef Frames < handle
             Average = 0;
             figname = 0;
             filt = 0;
-            if ~isempty(varargin)
-                for input_index = 1:2:length(varargin)
-                    switch varargin{input_index}
-                        case 'SaveFig'
-                            SaveFig = varargin{input_index + 1};
-                        case 'FigName'
-                            figname = varargin{input_index + 1};
-                        case 'Average'
-                            Average = varargin{input_index + 1};
-                        case 'Filter'
-                            filt = varargin{input_index + 1};
-                        otherwise
-                            error('Unknown optional input');
-                    end
-                end
-            end
+
             
             if Average
                 Im1=mean(obj.rfm,3);
@@ -521,6 +538,7 @@ classdef Frames < handle
             
             SaveFig = 0;
             figname = 0;
+            mask = 1;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
                     switch varargin{input_index}
@@ -528,6 +546,8 @@ classdef Frames < handle
                             SaveFig = varargin{input_index + 1};
                         case 'FigName'
                             figname = varargin{input_index + 1};
+                        case 'Mask'
+                            mask = varargin{input_index + 1};
                         otherwise
                             error('Unknown optional input');
                     end
@@ -544,18 +564,18 @@ classdef Frames < handle
             
             fig=figure('Visible','off');            
             
-            sb1 = subplot(1,2,1);
+            sb1 = subplot(1,2+mask,1);
             imagesc(obj.X,obj.Y_xc,Im2);
             title(['Flow Speed: ',num2str(v),'mm/s']);
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
             load('cm_surf.mat');
-            caxis([-2*v 2*v])
+            caxis([-4*v 4*v])
             colormap(sb1,cm_surf);
             c=colorbar;
             ylabel(c,'Flow Speed (mm/s)');
             
-            sb2 = subplot(1,2,2);
+            sb2 = subplot(1,2+mask,2);
             imagesc(obj.X,obj.Y_xc,Im3);
             title('X-Corr Amplitude (a.u.)');
             xlabel('Lateral (mm)');
@@ -566,7 +586,21 @@ classdef Frames < handle
             caxis([cmin cmax])
             colorbar;
             
-            set(fig, 'Position', [100 100 800 600]);
+            if mask
+                Im4 = obj.xc_mask.*obj.xc_disp;
+                sb3 = subplot(1,2+mask,3);
+                imagesc(obj.X,obj.Y_xc,Im4)
+                title('Masked');
+                xlabel('Lateral (mm)');
+                ylabel('Depth (mm)');
+                caxis([-4*v 4*v])
+                colormap(sb3,cm_surf);
+                c=colorbar;
+                ylabel(c,'Flow Speed (mm/s)');
+            end
+            
+            
+            set(fig, 'Position', [100 100 800+400*mask 600]);
             
             if SaveFig
                 if ~figname
