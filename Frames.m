@@ -301,10 +301,10 @@ classdef Frames < handle
                 obj.p0_recon_TR(:,:,i) = recon';
             end
             close(h);
+            obj.p0_recon = obj.p0_recon_TR;
             disp('Saving..');
             obj.Save()
             disp('Done.');
-            obj.p0_recon = obj.p0_recon_TR;
         end
         function FT(obj,N,varargin) %Reconstruction via fourier transform
             if ~N
@@ -432,6 +432,9 @@ classdef Frames < handle
             Y0 = x_corr.IW/2*dy;
             Yend = Y0+(size(temp,3)-1)*dy;
             obj.Y_xc = (Y0:dy:Yend)*1E3;
+            
+            %estimate flow speed
+            obj.FindFlow;
         end   
         %Compute Flow
         function FindFlow(obj, varargin)
@@ -467,7 +470,23 @@ classdef Frames < handle
             Average = 0;
             figname = 0;
             filt = 0;
-
+            
+            if ~isempty(varargin)
+                for input_index = 1:2:length(varargin)
+                    switch varargin{input_index}
+                        case 'SaveFig'
+                            SaveFig = varargin{input_index + 1};
+                        case 'FigName'
+                            figname = varargin{input_index + 1};
+                        case 'Average'
+                            Average = varargin{input_index + 1};
+                        case 'Filter'
+                            filt = varargin{input_index + 1};
+                        otherwise
+                            error('Unknown optional input');
+                    end
+                end
+            end
             
             if Average
                 Im1=mean(obj.rfm,3);
@@ -560,7 +579,7 @@ classdef Frames < handle
             %find flowrate in mm/s         
             d=obj.flw.tube_diameter; %(mm)
             A=pi*(d/2)^2;
-            v=obj.flw_r/A*10;
+            v=obj.flw_r/A*1000/60;
             
             fig=figure('Visible','off');            
             
@@ -590,7 +609,7 @@ classdef Frames < handle
                 Im4 = obj.xc_mask.*obj.xc_disp;
                 sb3 = subplot(1,2+mask,3);
                 imagesc(obj.X,obj.Y_xc,Im4)
-                title('Masked');
+                title(['Masked estimate: ',num2str(obj.xc_flw),'mm/s']);
                 xlabel('Lateral (mm)');
                 ylabel('Depth (mm)');
                 caxis([-4*v 4*v])
