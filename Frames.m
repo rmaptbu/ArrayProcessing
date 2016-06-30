@@ -187,11 +187,37 @@ classdef Frames < handle
             
 
         end
-        function [QS1, QS2] = QSCorrect(obj,QS1, varargin) %Q Switch correction
+        function [QS1, QS2] = QSCorrect(obj,varargin) %Q Switch correction
             %Removes initial data points of frame pairs
             %Only necessary if acquisition is not triggered by the laser
             %output
-            if isempty(QS1) %accept empty input to atomatically detect delay
+            auto = 0;
+            if ~isempty(varargin)
+                for input_index = 1:2:length(varargin)
+                    switch varargin{input_index}
+                        case 'AutoDetect'
+                            auto = varargin{input_index + 1};
+                        case 'QS1'
+                            assert(~auto);
+                            QS1 = varargin{input_index + 1}; 
+                            obj.QS1=QS1*1E-9*obj.acq.fs;
+                        case 'QS2'
+                            assert(~auto);
+                            QS2 = varargin{input_index + 1};
+                            obj.QS2=QS2*1E-9*obj.acq.fs;
+                        otherwise
+                            error('Unknown optional input');
+                    end
+                end
+            else
+                TrigDel = obj.RF.laser_trig_delay + obj.RF.frame_skip + obj.RF.client_delay;
+                AcqDel = obj.acq.dt/obj.acq.fs*1e6; %µs
+                QS1 = (AcqDel - TrigDel)*obj.acq.fs/1e6;
+                QS2 = QS1;
+                obj.QS2 = QS2;
+                obj.QS1 = QS1;
+            end
+            if auto %accept empty input to atomatically detect delay
                 disp('Auto detect QS delay');
                 %find first point where there is no background
                 %thresholded by n sigma
@@ -216,8 +242,7 @@ classdef Frames < handle
                         obj.QS2=i;
                         QS2=i/(1E-9*obj.acq.fs);
                     end
-                    if flag1 && flag2
-                        
+                    if flag1 && flag2                        
                         break
                     end
                 end
@@ -236,18 +261,8 @@ classdef Frames < handle
                 QS_offset=median(median(xc_displacement(1:25,1:30)))/dv;
 
                 obj.QS2 = obj.QS2-QS_offset;
-            else
-                %QS1 and QS2 given in ns
-                %Convert ns to data points to discard
-                obj.QS1=QS1*1E-9*obj.acq.fs;
-                if ~isempty(varargin)
-                    QS2=QS1;
-                else                    
-                    QS2=varargin{1};
-                end
-                obj.QS2=QS2*1E-9*obj.acq.fs;
             end
-            
+                        
             h = waitbar(0, 'Initialising Waitbar');
             msg='Resampling...';
             obj.rfm=[];
@@ -273,14 +288,15 @@ classdef Frames < handle
         end
         function Init(obj)
             obj.LoadRFM;
-            obj.QSCorrect([]);
+            obj.QSCorrect('QS1',580,'QS2',580);
             obj.Detrend();
             obj.FT(0);
-%             obj.Highpass(5);
+            obj.Highpass(5,1);
             obj.Wallfilter();
-            obj.PlotRFM('Filter',1)            
+%             obj.PlotRFM('Filter',1)            
             obj.EnsembleCorrelation();
             obj.PlotXC();
+            obj.Save();
         end
         %Reconstruction
         function TR(obj,N) %Reconstruction via time reversal
@@ -423,6 +439,7 @@ classdef Frames < handle
             %ensemble correlations:
             obj.xc_raw=squeeze(mean(xc_stack,4));
             obj.FindShift();
+            
             %deconvolve xcorr amplitude
             kernel=ones(x_corr.IW,1);
             obj.xc_amp = deconvlucy(obj.xc_amp,kernel);
@@ -434,35 +451,8 @@ classdef Frames < handle
             obj.Y_xc = (Y0:dy:Yend)*1E3;
             
             %estimate flow speed
-            obj.FindFlow;
+            obj.FindFlow();
         end   
-        %Compute Flow
-        function FindFlow(obj, varargin)
-            %Parse inputs
-            cut = 30; %throw away first 30 pixels
-            if ~isempty(varargin)
-                for input_index = 1:2:length(varargin)
-                    switch varargin{input_index}
-                        case 'LaserNoise'
-                            cut = varargin{input_index + 1}; %in mm
-                            dy = obj.RF.speed_of_sound*obj.dt*1E3;
-                            cut = cut/dy; %mm to pixels
-                        otherwise
-                            error('Unknown optional input');
-                    end
-                end
-            end
-            %find mask
-            m = max(max(obj.xc_amp(cut:end,:)));
-            m = m/4;
-            obj.xc_mask = obj.xc_amp>m;
-            obj.xc_mask(1:cut,:) = false;
-            
-            x = obj.xc_disp(obj.xc_mask);
-            obj.xc_flw = median(x);
-            obj.xc_flw_std = std(x);
-            
-        end
         %Graphical output
         function PlotRFM (obj, varargin)
             
@@ -686,7 +676,7 @@ classdef Frames < handle
             dy = obj.RF.speed_of_sound/obj.acq.fs;
             T = obj.acq.ftime*1E-6; %delay between pulses (seconds)
             theta = obj.flw.theta;
-            dv = (dy/(T*cos(theta)))*1E3; %mm/s
+            dv = (dy/(T*cos(theta*pi/180)))*1E3; %mm/s
             
             L = (size(xc,1)-1)/2;
             y = (-L:L)*dv;
@@ -708,6 +698,32 @@ classdef Frames < handle
             end
 
 
+        end
+        function FindFlow(obj, varargin)
+            %Parse inputs
+            cut = 30; %throw away first 30 pixels
+            if ~isempty(varargin)
+                for input_index = 1:2:length(varargin)
+                    switch varargin{input_index}
+                        case 'LaserNoise'
+                            cut = varargin{input_index + 1}; %in mm
+                            dy = obj.RF.speed_of_sound*obj.dt*1E3;
+                            cut = cut/dy; %mm to pixels
+                        otherwise
+                            error('Unknown optional input');
+                    end
+                end
+            end
+            %find mask
+            m = max(max(obj.xc_amp(cut:end,:)));
+            m = m/4;
+            obj.xc_mask = obj.xc_amp>m;
+            obj.xc_mask(1:cut,:) = false;
+            
+            x = obj.xc_disp(obj.xc_mask);
+            obj.xc_flw = median(x);
+            obj.xc_flw_std = std(x);
+            
         end
     end
 end

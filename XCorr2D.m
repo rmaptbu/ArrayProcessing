@@ -29,6 +29,9 @@ for i=1:n_corrs
     Im1_sl(:,:,i) = Im1((i-1)*SZ+1:(i-1)*SZ+IW,:);
     Im2_sl(:,:,i) = Im2((i-1)*SZ+1:(i-1)*SZ+IW,:);
 end
+%Normalise
+% Im1_sl=bsxfun(@rdivide,Im1_sl,max(Im1_sl));
+% Im2_sl=bsxfun(@rdivide,Im2_sl,max(Im2_sl));
 %Fourier Transform all sequences
 Im1_sl_fft=fft(Im1_sl,2^nextpow2(2*IW-1));
 Im2_sl_fft=fft(Im2_sl,2^nextpow2(2*IW-1));
