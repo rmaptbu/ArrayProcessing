@@ -421,8 +421,8 @@ classdef Frames < handle
             end
             assert(rem(size(im_stack,3),2)==0);
             
-            x_corr.IW=64;
-            x_corr.SW=32;
+            x_corr.IW=32;
+            x_corr.SW=16;
             x_corr.SZ=1;
             
             temp=XCorr2D(im_stack(:,:,1),im_stack(:,:,2),x_corr);
@@ -434,8 +434,7 @@ classdef Frames < handle
                 waitbar(i/(size(im_stack,3)-1),h,msg);
                 xc_stack(:,:,:,(i+1)/2) = XCorr2D(im_stack(:,:,i),im_stack(:,:,i+1),x_corr);
             end
-            close(h);
-            
+            close(h);    
             %ensemble correlations:
             obj.xc_raw=squeeze(mean(xc_stack,4));
             obj.FindShift();
@@ -579,7 +578,7 @@ classdef Frames < handle
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
             load('cm_surf.mat');
-            caxis([-4*v 4*v])
+            caxis([-2*v 2*v])
             colormap(sb1,cm_surf);
             c=colorbar;
             ylabel(c,'Flow Speed (mm/s)');
@@ -602,7 +601,7 @@ classdef Frames < handle
                 title(['Masked estimate: ',num2str(obj.xc_flw),'mm/s']);
                 xlabel('Lateral (mm)');
                 ylabel('Depth (mm)');
-                caxis([-4*v 4*v])
+                caxis([-2*v 2*v])
                 colormap(sb3,cm_surf);
                 c=colorbar;
                 ylabel(c,'Flow Speed (mm/s)');
@@ -659,7 +658,7 @@ classdef Frames < handle
             end
         end         
         function Save(obj) %save the object to original folder
-            save([obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.mat'],'obj')
+            save([obj.pathname,'/',obj.filename,'.mat'],'obj')
         end
         function [xc_displacement, xc_amplitude] = FindShift(obj, varargin)
             %Takes output from Xcorr2D and finds position and amplitude of

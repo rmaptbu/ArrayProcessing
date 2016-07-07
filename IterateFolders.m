@@ -10,8 +10,8 @@ for i=1:length(cases)
         disp(cases{i});
         [PAFrames, ~, ~] = LoadFiles('Path',path);
         PAFrames.Init
-        v = [v,PAFrames.xc_flow];
-        e = [e,PAFrames.xc_flow_std];
+        v = [v,PAFrames.xc_flw];
+        e = [e,PAFrames.xc_flw_std];
     end
 end
 end

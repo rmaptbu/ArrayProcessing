@@ -2,12 +2,15 @@ function [PAFrames, USFrames, pathname] = LoadFiles(varargin)
 %function settings
 nr_load_fr=2; %how many consectives frames in file
 nr_skip_fr=18; %how many frames to skip reading
+ld_existing = 0;
 
 if ~isempty(varargin)
     for input_index = 1:2:length(varargin)
         switch varargin{input_index}
             case 'Path'
                 pathname = varargin{input_index + 1};
+            case 'LoadExisting'
+                ld_existing = varargin{input_index + 1};
             otherwise
                 error('Unknown optional input');
         end
@@ -15,7 +18,7 @@ if ~isempty(varargin)
 end              
 %select folder
 if ~exist('pathname','var')
-    pathname = uigetdir('/Users/Thore/Documents/Transducer Measurements/160707LinArray/');
+    pathname = uigetdir('/Users/Thore/Documents/LabData/Transducer Measurements/160707LinArray/');
 %     pathname = uigetdir('C:\Users\LABPC_TB\Documents\TransducerMeasurements\201605');
 end
 %% Initialise
@@ -39,7 +42,7 @@ end
 %% Load data
 % load PA file settings
 PAFrames = LoadFrames(pathname, 'PAFrames', PAFiles,...
-    nr_load_fr, nr_skip_fr,flow_settings, flow_rate, RF_settings);
+    nr_load_fr, nr_skip_fr,flow_settings, flow_rate, RF_settings, ld_existing);
 if ~isa(PAFrames,'Frames')
     disp('changing type')
     PAFrames = typecast(PAFrames,'Frames');
@@ -47,7 +50,7 @@ end
 
 % load US file settings
 USFrames = LoadFrames(pathname, 'USFrames', USFiles,...
-    20,0,flow_settings, flow_rate, RF_settings);
+    20,0,flow_settings, flow_rate, RF_settings, ld_existing);
 if ~isa(USFrames,'Frames')
     disp('changing type')
     USFrames = typecast(USFrames,'Frames');
@@ -59,10 +62,10 @@ USFrames.KWaveInit();
 end
 
 function [frames] = LoadFrames(pathname,objname,files,...
-    nr_load_fr, nr_skip_fr,flow_settings, flow_rate, RF_settings)
+    nr_load_fr, nr_skip_fr,flow_settings, flow_rate, RF_settings, ld_existing)
 currentpath=pwd;
 cd(pathname)
-if exist([objname,'.mat'], 'file')
+if exist([objname,'.mat'], 'file') && ~ld_existing
     title=['Load ',objname];
     msg=['Load existing ',objname,'.mat?'];
     button=questdlg(msg,title,'Yes','No','Yes');
@@ -75,6 +78,11 @@ if exist([objname,'.mat'], 'file')
         case 'No'
             % load file settings
     end
+elseif exist([objname,'.mat'], 'file') && ld_existing
+    frames = load([pathname,'/',objname,'.mat']);
+    cd(currentpath)
+    frames = frames.obj;
+    return
 end
 cd(currentpath)
  % load file settings
