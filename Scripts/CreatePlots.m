@@ -24,11 +24,11 @@ for i=1:length(cases)
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true, 'FigName', 'PAF_xcorr_FFT_filt');
+        PAFrames.PlotXC('SaveFig',true, 'FigName', 'PAF_xcorr_FFT_filt_min');
         PAFrames.pathname=[path,'/imagesFT_filt']; 
-        for i=1:size(PAFrames.rfm,3)/2
-            PAFrames.PlotRecon(i,'SaveFig',true);
-        end
+%         for i=1:size(PAFrames.rfm,3)/2
+%             PAFrames.PlotRecon(i,'SaveFig',true);
+%         end
         vFT = [vFT,PAFrames.xc_flw];
         eFT = [eFT,PAFrames.xc_flw_std];
         
@@ -38,15 +38,15 @@ for i=1:length(cases)
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true, 'FigName', 'PAF_xcorr_TR_filt');
+        PAFrames.PlotXC('SaveFig',true, 'FigName', 'PAF_xcorr_TR_filt_min');
         PAFrames.pathname=[path,'/imagesTR_filt'];
-        for i=1:size(PAFrames.rfm,3)/2
-            PAFrames.PlotRecon(i,'SaveFig',true);
-        end
+%         for i=1:size(PAFrames.rfm,3)/2
+%             PAFrames.PlotRecon(i,'SaveFig',true);
+%         end
         vTR = [vTR,PAFrames.xc_flw];
         eTR = [eTR,PAFrames.xc_flw_std];
         
         PAFrames.pathname=path;
     end
 end
-save([path,'/meas_filt.mat'],'v','vFT','eFT','vTR','eTR')
+save([pathname,'/meas_filt.mat'],'v','vFT','eFT','vTR','eTR')

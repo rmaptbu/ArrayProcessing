@@ -461,7 +461,7 @@ classdef Frames < handle
             end
             close(h);    
             %ensemble correlations:
-            obj.xc_raw=squeeze(mean(xc_stack,4));
+            obj.xc_raw=squeeze(min(abs(xc_stack),4));
             obj.FindShift();
             
             %deconvolve xcorr amplitude
