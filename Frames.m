@@ -290,12 +290,12 @@ classdef Frames < handle
             obj.LoadRFM;
             obj.QSCorrect('QS1',580,'QS2',580);
             obj.Detrend();
-            obj.FT(0);
+            obj.FT(2);
             obj.Highpass(5,1);
             obj.Wallfilter();
 %             obj.PlotRFM('Filter',1)            
-            obj.EnsembleCorrelation();
-            obj.PlotXC();
+            obj.EnsembleCorrelation('AllCorrelations',true);
+            obj.PlotXC('SaveFig',true);
             obj.Save();
         end
         %Reconstruction
@@ -405,9 +405,11 @@ classdef Frames < handle
         end
         %Correlation
         function EnsembleCorrelation(obj,varargin)
+            all_corrs = 0;
             if isempty(varargin)
                 im_stack = obj.p0_recon;
             else
+                for input_index = 1:2:length(varargin)
                 switch varargin{1}
                     case 'FT'
                         im_stack=obj.p0_recon_FT;
@@ -415,8 +417,14 @@ classdef Frames < handle
                         im_stack=obj.p0_recon_TR;
                     case 'Raw'
                         im_stack=obj.rfm;
+                    case 'AllCorrelations'
+                        if ~exist('im_stack','var')
+                            im_stack = obj.p0_recon;
+                        end
+                        all_corrs = varargin{input_index + 1};
                     otherwise
                         error ('Unkown Type: Select FT or TR')
+                end
                 end
             end
             assert(rem(size(im_stack,3),2)==0);
@@ -427,12 +435,29 @@ classdef Frames < handle
             
             temp=XCorr2D(im_stack(:,:,1),im_stack(:,:,2),x_corr);
             n_corrs=size(im_stack,3)/2;
-            xc_stack=zeros([size(temp),n_corrs]);            
+            xc_stack=zeros([size(temp),n_corrs]);
+            
+            %Create Time basis for xcorr
+            dy = x_corr.SZ*obj.RF.speed_of_sound/obj.acq.fs;
+            Y0 = x_corr.IW/2*dy;
+            Yend = Y0+(size(temp,3)-1)*dy;
+            obj.Y_xc = (Y0:dy:Yend)*1E3;
+            
             h = waitbar(0, 'Initialising Waitbar');
             msg='Calculating Cross-Correlations...';
             for i = 1:2:size(im_stack,3)-1
                 waitbar(i/(size(im_stack,3)-1),h,msg);
-                xc_stack(:,:,:,(i+1)/2) = XCorr2D(im_stack(:,:,i),im_stack(:,:,i+1),x_corr);
+                xc = XCorr2D(im_stack(:,:,i),im_stack(:,:,i+1),x_corr);
+                xc_stack(:,:,:,(i+1)/2) = xc;
+                if all_corrs
+                    [obj.xc_disp, obj.xc_amp] = obj.FindShift(xc);
+                    %deconvolve xcorr amplitude
+                    kernel=ones(x_corr.IW,1);
+                    obj.xc_amp = deconvlucy(obj.xc_amp,kernel);
+                    obj.FindFlow();
+                    fig_name = ['PA_xcorr',num2str((i+1)/2)];
+                    obj.PlotXC('SaveFig',true, 'FigName', fig_name);
+                end
             end
             close(h);    
             %ensemble correlations:
@@ -441,13 +466,7 @@ classdef Frames < handle
             
             %deconvolve xcorr amplitude
             kernel=ones(x_corr.IW,1);
-            obj.xc_amp = deconvlucy(obj.xc_amp,kernel);
-            
-            %Create Time basis for xcorr
-            dy = x_corr.SZ*obj.RF.speed_of_sound/obj.acq.fs;
-            Y0 = x_corr.IW/2*dy;
-            Yend = Y0+(size(temp,3)-1)*dy;
-            obj.Y_xc = (Y0:dy:Yend)*1E3;
+            obj.xc_amp = deconvlucy(obj.xc_amp,kernel);            
             
             %estimate flow speed
             obj.FindFlow();
@@ -560,12 +579,12 @@ classdef Frames < handle
                             error('Unknown optional input');
                     end
                 end
-            end            
-
+            end
+            
             Im2=obj.xc_disp;
             Im3=obj.xc_amp;
             
-            %find flowrate in mm/s         
+            %find flowrate in mm/s
             d=obj.flw.tube_diameter; %(mm)
             A=pi*(d/2)^2;
             v=obj.flw_r/A*1000/60;
@@ -573,15 +592,20 @@ classdef Frames < handle
             fig=figure('Visible','off');            
             
             sb1 = subplot(1,2+mask,1);
+            Im2=-Im2; %minus sign because tube was directed the wrong way
             imagesc(obj.X,obj.Y_xc,Im2);
+%             title('Flow Speed (normalised)')
             title(['Flow Speed: ',num2str(v),'mm/s']);
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
             load('cm_surf.mat');
             caxis([-2*v 2*v])
+%             caxis([-2 2]);
             colormap(sb1,cm_surf);
             c=colorbar;
             ylabel(c,'Flow Speed (mm/s)');
+
+            ylim([4 9]);xlim([-2 2]);
             
             sb2 = subplot(1,2+mask,2);
             imagesc(obj.X,obj.Y_xc,Im3);
@@ -593,6 +617,7 @@ classdef Frames < handle
             cmax=max(max(Im3(50:end,:)));
             caxis([cmin cmax])
             colorbar;
+            ylim([4 9]);xlim([-2 2]);
             
             if mask
                 Im4 = obj.xc_mask.*obj.xc_disp;
@@ -608,7 +633,7 @@ classdef Frames < handle
             end
             
             
-            set(fig, 'Position', [100 100 800+400*mask 600]);
+            set(fig, 'Position', [100 100 600+400*mask 400]);
             
             if SaveFig
                 if ~figname
@@ -623,26 +648,58 @@ classdef Frames < handle
                 fig.Visible='on';
             end
         end
-        function PlotFT (obj)
-            Im1=obj.p0_recon_FT(:,:,1);
-            Im2=obj.p0_recon_FT(:,:,2);
+        function PlotRecon (obj,i, varargin)
+            SaveFig = 0;
+            figname = 0;
+            if ~isempty(varargin)
+                for input_index = 1:2:length(varargin)
+                    switch varargin{input_index}
+                        case 'SaveFig'
+                            SaveFig = varargin{input_index + 1};
+                        case 'FigName'
+                            figname = varargin{input_index + 1};
+                        otherwise
+                            error('Unknown optional input');
+                    end
+                end
+            end
+            
+            Im1=obj.p0_recon(:,:,2*i-1);
+            Im2=obj.p0_recon(:,:,2*i);
             
             
-            figure;
+            fig1 = figure('Visible','off'); 
+            subplot (1, 2, 1)
             colormap('gray');
             imagesc(obj.X,obj.Y,Im1);
-            title('Im1');
-            caxis([-80 80])
+            title('Image 1');
+            caxis([-120 120])
             xlabel('Lateral (mm)');
-            ylabel('Depth (mm)');
+            ylabel('Depth (mm)');            
+            ylim([4 9]);xlim([-2 2]);
             
-            figure;
+            subplot (1, 2, 2)
             colormap('gray');
             imagesc(obj.X,obj.Y,Im2);
-            title('Im2');
-            caxis([-80 80])
+            title('Image 2');
+            caxis([-120 120])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
+            ylim([4 9]);xlim([-2 2]);
+            
+            set(fig1, 'Position', [100 100 500 400]);
+            if SaveFig
+                if ~figname
+                    figname = [obj.pathname,'/',obj.filename,num2str(i),'.png'];
+                else
+                    figname = [obj.pathname,'/',figname,'.png'];
+                end
+                set(gcf,'PaperPositionMode','auto')
+                print(fig1,figname,'-dpng','-r0')
+                close(fig1);
+            else
+                fig1.Visible='on';
+            end
         end
         %helper methods     
         function Upsample(obj,N) %Upsample number of detectors
@@ -715,7 +772,7 @@ classdef Frames < handle
             end
             %find mask
             m = max(max(obj.xc_amp(cut:end,:)));
-            m = m/4;
+            m = m/2;
             obj.xc_mask = obj.xc_amp>m;
             obj.xc_mask(1:cut,:) = false;
             
