@@ -5,21 +5,27 @@ vFT=[];
 eFT=[];
 vTR=[];
 eTR=[];
+v=[];
 for i=1:length(cases)
     path=[pathname,'/',cases{i}];
     disp(i/length(cases))
     if exist(path,'dir')
         disp(cases{i});
         [PAFrames, ~, ~] = LoadFiles('Path',path,'LoadExisting',1);
-        mkdir([path,'/imagesFT'])
-        mkdir([path,'/imagesTR'])
+        mkdir([path,'/imagesFT_filt'])
+        mkdir([path,'/imagesTR_filt'])
         PAFrames.pathname=path;
+        d=PAFrames.flw.tube_diameter; %(mm)
+        A=pi*(d/2)^2;
+        v=[v,PAFrames.flw_r/A*1000/60];
         
         %FFT
         PAFrames.p0_recon=PAFrames.p0_recon_FT;
+        PAFrames.Highpass(5,1);
+        PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true, 'FigName', 'PAF_xcorr_FFT');
-        PAFrames.pathname=[path,'/imagesFT'];
+        PAFrames.PlotXC('SaveFig',true, 'FigName', 'PAF_xcorr_FFT_filt');
+        PAFrames.pathname=[path,'/imagesFT_filt']; 
         for i=1:size(PAFrames.rfm,3)/2
             PAFrames.PlotRecon(i,'SaveFig',true);
         end
@@ -27,10 +33,13 @@ for i=1:length(cases)
         eFT = [eFT,PAFrames.xc_flw_std];
         
         %TR
+        PAFrames.pathname=path;
         PAFrames.p0_recon=PAFrames.p0_recon_TR;
+        PAFrames.Highpass(5,1);
+        PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true, 'FigName', 'PAF_xcorr_TR');
-        PAFrames.pathname=[path,'/imagesTR'];
+        PAFrames.PlotXC('SaveFig',true, 'FigName', 'PAF_xcorr_TR_filt');
+        PAFrames.pathname=[path,'/imagesTR_filt'];
         for i=1:size(PAFrames.rfm,3)/2
             PAFrames.PlotRecon(i,'SaveFig',true);
         end
@@ -40,4 +49,4 @@ for i=1:length(cases)
         PAFrames.pathname=path;
     end
 end
-save([path,'/meas.mat'],'vFT','eFT','vTR','eTR')
+save([path,'/meas_filt.mat'],'v','vFT','eFT','vTR','eTR')
