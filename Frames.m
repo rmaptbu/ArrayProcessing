@@ -1,7 +1,7 @@
 classdef Frames < handle
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %Object to handle 2D Photoacoustic Frames
-    %Thore Bücking 2016 (rmaptbu@ucl.ac.uk)
+    %Thore B?cking 2016 (rmaptbu@ucl.ac.uk)
     %Requires the K-Wave Toolbox (www.k-wave.org)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %Example usage:
@@ -211,7 +211,7 @@ classdef Frames < handle
                 end
             else
                 TrigDel = obj.RF.laser_trig_delay + obj.RF.frame_skip + obj.RF.client_delay;
-                AcqDel = obj.acq.dt/obj.acq.fs*1e6; %µs
+                AcqDel = obj.acq.dt/obj.acq.fs*1e6; %?s
                 QS1 = (AcqDel - TrigDel)*obj.acq.fs/1e6;
                 QS2 = QS1;
                 obj.QS2 = QS2;
@@ -278,8 +278,7 @@ classdef Frames < handle
             obj.Y = (0:dy:(size(obj.rfm,1)-1)*dy)*1E3;
             
             close(h); 
-            %Redo KWaveInit because of changed sample size
-            obj.KWaveInit();
+         
             
         end 
         function Detrend(obj) 
@@ -289,8 +288,9 @@ classdef Frames < handle
         function Init(obj)
             obj.LoadRFM;
             obj.QSCorrect('QS1',580,'QS2',580);
+            obj.KWaveInit('Upsample',4);
             obj.Detrend();
-            obj.FT(2);
+            obj.FT(1);
             obj.Highpass(5,1);
             obj.Wallfilter();
 %             obj.PlotRFM('Filter',1)            
@@ -318,29 +318,33 @@ classdef Frames < handle
             end
             close(h);
             obj.p0_recon = obj.p0_recon_TR;
-            disp('Saving..');
-            obj.Save()
+%             disp('Saving..');
+%             obj.Save()
             disp('Done.');
         end
         function FT(obj,N,varargin) %Reconstruction via fourier transform
             if ~N
                 N=size(obj.rfm,3);
             end
-            paddingX=1.5*size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
+            padX=1.5*size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
             %Autodetect necessary padding in Y
             r=obj.kgrid.dy/obj.kgrid.dx;
             L=size(obj.rfm,1);
             %want: (L+x)/L=r
-            paddingY=round(L*(r-1));
+            padY1=round(L*(r-1));
+            padY2=round(L*(r-1));
             save_opt = 0;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
                     switch varargin{input_index}
                         case 'Save'
                             save_opt = varargin{input_index + 1};
-                        case 'Padding'
-                            paddingY = varargin{input_index + 1};
-                            paddingX = varargin{input_index + 1};
+                        case 'PadY1'
+                            padY1 = varargin{input_index + 1};
+                        case 'PadY2'                            
+                            padY2 = varargin{input_index + 1};
+                        case 'PadX'
+                            padX = varargin{input_index + 1};
                         otherwise
                             error('Unknown optional input');
                     end
@@ -353,17 +357,77 @@ classdef Frames < handle
             dimX=size(obj.rfm(:,:,1),2);
             dimY=size(obj.rfm(:,:,1),1);
             
-            sensor_data=zeros(2*paddingY+dimY,2*paddingX+dimX);
+            sensor_data=zeros(padY1+padY2+dimY,2*padX+dimX);
             for i=1:N
                 waitbar(i/N,h,msg);
                 disp(i/N)     
-                sensor_data(paddingY+1:paddingY+dimY,paddingX+1:paddingX+dimX)=obj.rfm(:,:,i);
-                recon = kspaceLineRecon(sensor_data, dy, obj.dt, ...
+                sensor_data(padY1+1:padY1+dimY,padX+1:padX+dimX)=obj.rfm(:,:,i);
+                [recon p1 p2] = kspaceLineRecon(sensor_data, dy, obj.dt, ...
                     obj.medium.sound_speed, 'Interp', '*linear');  
                 
-                obj.p0_recon_FT(:,:,i) = recon(paddingY+1:paddingY+dimY,paddingX+1:paddingX+dimX);
+                obj.p0_recon_FT(:,:,i) = recon(padY1+1:padY1+dimY,padX+1:padX+dimX);
             end
             close(h);
+            
+%             fig=figure('Position', [100 100 1400 900],'Visible','on');            
+%             colormap('gray');
+%             subplot(2,5,[1 6]);
+%             imagesc(sensor_data);
+%             title('Raw');
+%             caxis([-100 100])
+%             ax = gca; ax.XTick =[] ; ax.YTick = [];
+%             xlabel('Lateral');
+%             ylabel('Depth');  
+%             
+%             sb=subplot(2,5,[2 7]);
+%             colormap(sb,'parula');
+% %             figure;
+%             imagesc(log(abs(p1)));
+%             title('log(FT)')
+%             caxis([13 17])
+%             ax = gca; ax.XTick =[] ; ax.YTick = [];
+%             xlabel('$k_x$','Interpreter','LaTex');
+%             ylabel('$\omega$','Interpreter','LaTex');  
+%             
+%             sb=subplot(2,5,[3 8]);
+%             colormap(sb,'parula');
+%             imagesc(log(abs(p2)));
+%             title('log(FT) dispersion corrected')
+%             caxis([13 17])
+%             ax = gca; ax.XTick =[] ; ax.YTick = [];
+%             xlabel('$k_x$','Interpreter','LaTex');
+%             ylabel('$k_y$','Interpreter','LaTex');  
+%             
+%             subplot(2,5,[4 9]);
+%             imagesc(recon);
+%             title('Reconstruction')
+%             caxis([-100 100])
+%             ax = gca; ax.XTick =[] ; ax.YTick = [];
+%             xlabel('Lateral');
+%             ylabel('Depth');  
+%             
+%             subplot(2,5,5);
+%             imagesc(obj.X,obj.Y,recon(padY1+1:padY1+dimY,padX+1:padX+dimX));
+%             title('Reconstruction')
+%             ylim([10 14]);xlim([-2 2]);
+%             caxis([-100 100])
+%             xlabel('Lateral (mm)');
+%             ylabel('Depth (mm)');  
+%             
+%             subplot(2,5,10);
+%             imagesc(obj.X,obj.Y,obj.p0_recon_TR(:,:,1));
+%             title('Time Reversal')
+%             caxis([-100 100])
+%             ylim([10 14]);xlim([-2 2]);
+%             xlabel('Lateral (mm)');
+%             ylabel('Depth (mm)');  
+%             
+%             figname = [obj.pathname,'/FT_PadY1',num2str(padY1),...
+%                 'PadY2',num2str(padY2),'PadX',num2str(padX),'_xcorr.png'];
+%             set(gcf,'PaperPositionMode','auto')
+%             print(fig,figname,'-dpng','-r0')
+% %             close(fig);
+            
             if save_opt
                 disp('Saving..');
                 obj.Save()
@@ -461,7 +525,7 @@ classdef Frames < handle
             end
             close(h);    
             %ensemble correlations:
-            obj.xc_raw=squeeze(min(abs(xc_stack),4));
+            obj.xc_raw=squeeze(mean(xc_stack),4);
             obj.FindShift();
             
             %deconvolve xcorr amplitude
