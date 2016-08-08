@@ -75,6 +75,7 @@ classdef Frames < handle
         
         %cross correlation results
         xc_raw %Raw ensemble cross correlation
+        xc_raw_min
         xc_disp %cross correlation displacement map
         xc_amp %cross correlation amplitude map
         xc_mask
@@ -330,6 +331,7 @@ classdef Frames < handle
             %Autodetect necessary padding in Y
             r=obj.kgrid.dy/obj.kgrid.dx;
             L=size(obj.rfm,1);
+            plot_fig = 1
             %want: (L+x)/L=r
             padY1=round(L*(r-1));
             padY2=round(L*(r-1));
@@ -345,6 +347,8 @@ classdef Frames < handle
                             padY2 = varargin{input_index + 1};
                         case 'PadX'
                             padX = varargin{input_index + 1};
+                        case 'Plot'
+                            plot_fig = varargin{input_index + 1};
                         otherwise
                             error('Unknown optional input');
                     end
@@ -369,65 +373,69 @@ classdef Frames < handle
             end
             close(h);
             
-%             fig=figure('Position', [100 100 1400 900],'Visible','on');            
-%             colormap('gray');
-%             subplot(2,5,[1 6]);
-%             imagesc(sensor_data);
-%             title('Raw');
-%             caxis([-100 100])
-%             ax = gca; ax.XTick =[] ; ax.YTick = [];
-%             xlabel('Lateral');
-%             ylabel('Depth');  
-%             
-%             sb=subplot(2,5,[2 7]);
-%             colormap(sb,'parula');
-% %             figure;
-%             imagesc(log(abs(p1)));
-%             title('log(FT)')
-%             caxis([13 17])
-%             ax = gca; ax.XTick =[] ; ax.YTick = [];
-%             xlabel('$k_x$','Interpreter','LaTex');
-%             ylabel('$\omega$','Interpreter','LaTex');  
-%             
-%             sb=subplot(2,5,[3 8]);
-%             colormap(sb,'parula');
-%             imagesc(log(abs(p2)));
-%             title('log(FT) dispersion corrected')
-%             caxis([13 17])
-%             ax = gca; ax.XTick =[] ; ax.YTick = [];
-%             xlabel('$k_x$','Interpreter','LaTex');
-%             ylabel('$k_y$','Interpreter','LaTex');  
-%             
-%             subplot(2,5,[4 9]);
-%             imagesc(recon);
-%             title('Reconstruction')
-%             caxis([-100 100])
-%             ax = gca; ax.XTick =[] ; ax.YTick = [];
-%             xlabel('Lateral');
-%             ylabel('Depth');  
-%             
-%             subplot(2,5,5);
-%             imagesc(obj.X,obj.Y,recon(padY1+1:padY1+dimY,padX+1:padX+dimX));
-%             title('Reconstruction')
-%             ylim([10 14]);xlim([-2 2]);
-%             caxis([-100 100])
-%             xlabel('Lateral (mm)');
-%             ylabel('Depth (mm)');  
-%             
-%             subplot(2,5,10);
-%             imagesc(obj.X,obj.Y,obj.p0_recon_TR(:,:,1));
-%             title('Time Reversal')
-%             caxis([-100 100])
-%             ylim([10 14]);xlim([-2 2]);
-%             xlabel('Lateral (mm)');
-%             ylabel('Depth (mm)');  
-%             
-%             figname = [obj.pathname,'/FT_PadY1',num2str(padY1),...
-%                 'PadY2',num2str(padY2),'PadX',num2str(padX),'_xcorr.png'];
-%             set(gcf,'PaperPositionMode','auto')
-%             print(fig,figname,'-dpng','-r0')
-% %             close(fig);
+            if plot_fig
+            fs=obj.acq.fs;
+            dk=1/(6E-3/dimX);
+            freq=0:(fs/size(sensor_data,1)):fs/2;
+            k=0:(dk/size(sensor_data,2)):dk/2;
+            fig=figure('Position', [100 100 1400 900],'Visible','on');            
+            colormap('gray');
+            subplot(2,5,[1 6]);
+            imagesc(sensor_data);
+            title('Raw');
+            caxis([-100 100])
+            ax = gca; ax.XTick =[  ] ; ax.YTick = [];
+            xlabel('Lateral');
+            ylabel('Depth');  
             
+            sb=subplot(2,5,[2 7]);
+            colormap(sb,'parula');
+            imagesc(fs,k,log(abs(p1)));
+            title('log(FT)')
+            caxis([13 17])
+%             ax = gca; ax.XTick =[] ; ax.YTick = [0 1 2 3];
+            xlabel('$k_x$','Interpreter','LaTex');
+            ylabel('$\omega$','Interpreter','LaTex');  
+            
+            sb=subplot(2,5,[3 8]);
+            colormap(sb,'parula');
+            imagesc(log(abs(p2)));
+            title('log(FT) dispersion corrected')
+            caxis([13 17])
+            ax = gca; ax.XTick =[] ; ax.YTick = [];
+            xlabel('$k_x$','Interpreter','LaTex');
+            ylabel('$k_y$','Interpreter','LaTex');  
+            
+            subplot(2,5,[4 9]);
+            imagesc(recon);
+            title('Reconstruction')
+            caxis([-100 100])
+            ax = gca; ax.XTick =[] ; ax.YTick = [];
+            xlabel('Lateral');
+            ylabel('Depth');  
+            
+            subplot(2,5,5);
+            imagesc(obj.X,obj.Y,recon(padY1+1:padY1+dimY,padX+1:padX+dimX));
+            title('Reconstruction')
+            ylim([10 14]);xlim([-2 2]);
+            caxis([-100 100])
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');  
+            
+            subplot(2,5,10);
+            imagesc(obj.X,obj.Y,obj.p0_recon_TR(:,:,1));
+            title('Time Reversal')
+            caxis([-100 100])
+            ylim([10 14]);xlim([-2 2]);
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');  
+            
+            figname = [obj.pathname,'/FT_PadY1',num2str(padY1),...
+                'PadY2',num2str(padY2),'PadX',num2str(padX),'_xcorr.png'];
+            set(gcf,'PaperPositionMode','auto')
+            print(fig,figname,'-dpng','-r0')
+%             close(fig);
+            end
             if save_opt
                 disp('Saving..');
                 obj.Save()
@@ -525,8 +533,13 @@ classdef Frames < handle
             end
             close(h);    
             %ensemble correlations:
-            obj.xc_raw=squeeze(mean(xc_stack),4);
+            obj.xc_raw=squeeze(mean(xc_stack,4));
+            disp(size(xc_stack));
+            M = max(xc_stack,[],1);
+            M = squeeze(M);
+            M = min(M,[],3);
             obj.FindShift();
+            obj.xc_amp = M';
             
             %deconvolve xcorr amplitude
             kernel=ones(x_corr.IW,1);
@@ -684,7 +697,7 @@ classdef Frames < handle
             ylim([4 9]);xlim([-2 2]);
             
             if mask
-                Im4 = obj.xc_mask.*obj.xc_disp;
+                Im4 = -1*obj.xc_mask.*obj.xc_disp;
                 sb3 = subplot(1,2+mask,3);
                 imagesc(obj.X,obj.Y_xc,Im4)
                 title(['Masked estimate: ',num2str(obj.xc_flw),'mm/s']);
@@ -804,7 +817,7 @@ classdef Frames < handle
             
             disp('Interpolating Cross-Correlations...');
             xc_i = interp1(y,xc,yi,'spline');
-            [M, I] = max(xc_i,[],1);            
+            [M, I] = max(xc_i,[],1);      
             M = squeeze(M);
             I = squeeze(I);
             disp('Done.');

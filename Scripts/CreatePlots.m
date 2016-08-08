@@ -20,7 +20,7 @@ for i=1:length(cases)
         v=[v,PAFrames.flw_r/A*1000/60];
         
         %FFT
-        PAFrames.p0_recon=PAFrames.p0_recon_FT;
+        PAFrames.LoadRecon('FT');
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
@@ -34,7 +34,7 @@ for i=1:length(cases)
         
         %TR
         PAFrames.pathname=path;
-        PAFrames.p0_recon=PAFrames.p0_recon_TR;
+        PAFrames.LoadRecon('TR');
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
@@ -49,4 +49,4 @@ for i=1:length(cases)
         PAFrames.pathname=path;
     end
 end
-save([pathname,'/meas_filt.mat'],'v','vFT','eFT','vTR','eTR')
+save([pathname,'/meas_filt_min.mat'],'v','vFT','eFT','vTR','eTR')
