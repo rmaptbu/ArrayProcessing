@@ -1,7 +1,7 @@
 classdef Frames < handle
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %Object to handle 2D Photoacoustic Frames
-    %Thore B?cking 2016 (rmaptbu@ucl.ac.uk)
+    %Thore Buecking 2016 (rmaptbu@ucl.ac.uk)
     %Requires the K-Wave Toolbox (www.k-wave.org)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %Example usage:
@@ -158,8 +158,8 @@ classdef Frames < handle
             %If not specified, choose value to make grid as close to square
             %as possible
             if ~exist('upsample','var')
-            %upsampling detectors to match dy...
-            N = ceil(dx/dy);
+            %no upsample
+            N = 1;
             else
                 N = upsample;
             end
@@ -289,15 +289,17 @@ classdef Frames < handle
         function Init(obj)
             obj.LoadRFM;
             obj.QSCorrect('QS1',580,'QS2',580);
-            obj.KWaveInit('Upsample',4);
+            obj.KWaveInit('Upsample',2);
             obj.Detrend();
             obj.FT(1);
-            obj.Highpass(5,1);
-            obj.Wallfilter();
+            obj.TR(1);
+            obj.PlotRFM;
+%             obj.Highpass(5,1);
+%             obj.Wallfilter();
 %             obj.PlotRFM('Filter',1)            
-            obj.EnsembleCorrelation('AllCorrelations',true);
-            obj.PlotXC('SaveFig',true);
-            obj.Save();
+%             obj.EnsembleCorrelation('AllCorrelations',true);
+%             obj.PlotXC('SaveFig',true);
+%             obj.Save();
         end
         %Reconstruction
         function TR(obj,N) %Reconstruction via time reversal
@@ -331,10 +333,10 @@ classdef Frames < handle
             %Autodetect necessary padding in Y
             r=obj.kgrid.dy/obj.kgrid.dx;
             L=size(obj.rfm,1);
-            plot_fig = 1;
+            plot_fig = 0;
             %want: (L+x)/L=r
-            padY1=round(L*(r-1));
-            padY2=round(L*(r-1));
+            padY1=0;%round(L*(r-1));
+            padY2=0;%round(L*(r-1));
             save_opt = 0;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
@@ -354,7 +356,7 @@ classdef Frames < handle
                     end
                 end
             end
-            dy = obj.RF.speed_of_sound*obj.dt;
+            dx = obj.kgrid.dx; %inverted units (just naming convention)
             obj.p0_recon_FT=zeros(size(obj.rfm,1),size(obj.rfm,2),N);
             h = waitbar(0, 'Initialising Waitbar');
             msg='Computing FFT...';
@@ -366,7 +368,7 @@ classdef Frames < handle
                 waitbar(i/N,h,msg);
                 disp(i/N)     
                 sensor_data(padY1+1:padY1+dimY,padX+1:padX+dimX)=obj.rfm(:,:,i);
-                [recon p1 p2] = kspaceLineRecon(sensor_data, dy, obj.dt, ...
+                [recon p1 p2] = kspaceLineRecon(sensor_data, dx, obj.dt, ...
                     obj.medium.sound_speed, 'Interp', '*linear');  
                 
                 obj.p0_recon_FT(:,:,i) = recon(padY1+1:padY1+dimY,padX+1:padX+dimX);
