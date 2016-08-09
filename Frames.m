@@ -331,7 +331,7 @@ classdef Frames < handle
             %Autodetect necessary padding in Y
             r=obj.kgrid.dy/obj.kgrid.dx;
             L=size(obj.rfm,1);
-            plot_fig = 1
+            plot_fig = 1;
             %want: (L+x)/L=r
             padY1=round(L*(r-1));
             padY2=round(L*(r-1));
@@ -417,7 +417,7 @@ classdef Frames < handle
             subplot(2,5,5);
             imagesc(obj.X,obj.Y,recon(padY1+1:padY1+dimY,padX+1:padX+dimX));
             title('Reconstruction')
-            ylim([10 14]);xlim([-2 2]);
+            ylim([4 9]);xlim([-2 2]);
             caxis([-100 100])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');  
@@ -426,7 +426,7 @@ classdef Frames < handle
             imagesc(obj.X,obj.Y,obj.p0_recon_TR(:,:,1));
             title('Time Reversal')
             caxis([-100 100])
-            ylim([10 14]);xlim([-2 2]);
+            ylim([4 9]);xlim([-2 2]);
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');  
             
