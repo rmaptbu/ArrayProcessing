@@ -329,22 +329,17 @@ classdef Frames < handle
             if ~N
                 N=size(obj.rfm,3);
             end
-            padX=1.5*size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
-            %want: (L+x)/L=r
-            padY1=0;%round(L*(r-1));
-            padY2=0;%round(L*(r-1));
+            padX=1.5*size(obj.rfm,2); %zero padding outside of frame to prevent wrapping         
+            padY=0;
+
             save_opt = 0;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
                     switch varargin{input_index}
                         case 'Save'
                             save_opt = varargin{input_index + 1};
-                        case 'PadY1'
-                            if ~isempty(varargin{input_index + 1});
-                            padY1 = varargin{input_index + 1};
-                            end
-                        case 'PadY2'                            
-                            padY2 = varargin{input_index + 1};
+                        case 'PadY'                            
+                            padY = varargin{input_index + 1};
                         case 'PadX'
                             padX = varargin{input_index + 1};
                         otherwise
@@ -357,20 +352,20 @@ classdef Frames < handle
             h = waitbar(0, 'Initialising Waitbar');
             msg='Computing FFT...';
             dimX=size(obj.rfm(:,:,1),2);
-            dimY=size(obj.rfm(:,:,1),1);
-            
-            sensor_data=zeros(padY1+padY2+dimY,2*padX+dimX);
+            dimY=size(obj.rfm(:,:,1),1);            
+            sensor_data=zeros(padY+dimY,2*padX+dimX);
             for i=1:N
                 waitbar(i/N,h,msg);
-                disp(i/N)     
-                sensor_data(padY1+1:padY1+dimY,padX+1:padX+dimX)=obj.rfm(:,:,i);
-                recon = kspaceLineRecon(sensor_data, dx, obj.dt, ...
-                obj.medium.sound_speed, 'Interp', '*linear');  
+                disp(i/N)    
+                sensor_data(1:dimY,padX+1:padX+dimX)=obj.rfm(:,:,i);
+                [recon] = kspaceLineRecon(sensor_data, dx, obj.dt, ...
+                    obj.medium.sound_speed, 'Interp', '*linear');  
                 
-                obj.p0_recon_FT(:,:,i) = recon(padY1+1:padY1+dimY,padX+1:padX+dimX);
+                obj.p0_recon_FT(:,:,i) = recon(1:dimY,padX+1:padX+dimX);
             end
-            close(h);
-           
+            close(h);            
+      
+
             if save_opt
                 disp('Saving..');
                 obj.Save()
