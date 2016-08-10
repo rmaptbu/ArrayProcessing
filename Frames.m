@@ -330,23 +330,16 @@ classdef Frames < handle
                 N=size(obj.rfm,3);
             end
             padX=1.5*size(obj.rfm,2); %zero padding outside of frame to prevent wrapping
-            %Autodetect necessary padding in Y
-            r=obj.kgrid.dy/obj.kgrid.dx;
-            L=size(obj.rfm,1);
-            plot_fig = 0;
-            %want: (L+x)/L=r
-            padY1=0;%round(L*(r-1));
-            padY2=0;%round(L*(r-1));
+            plot_fig = 0;            
+            padY=0;
             save_opt = 0;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
                     switch varargin{input_index}
                         case 'Save'
                             save_opt = varargin{input_index + 1};
-                        case 'PadY1'
-                            padY1 = varargin{input_index + 1};
-                        case 'PadY2'                            
-                            padY2 = varargin{input_index + 1};
+                        case 'PadY'                            
+                            padY = varargin{input_index + 1};
                         case 'PadX'
                             padX = varargin{input_index + 1};
                         case 'Plot'
@@ -363,81 +356,18 @@ classdef Frames < handle
             dimX=size(obj.rfm(:,:,1),2);
             dimY=size(obj.rfm(:,:,1),1);
             
-            sensor_data=zeros(padY1+padY2+dimY,2*padX+dimX);
+            sensor_data=zeros(padY+dimY,2*padX+dimX);
             for i=1:N
                 waitbar(i/N,h,msg);
                 disp(i/N)     
-                sensor_data(padY1+1:padY1+dimY,padX+1:padX+dimX)=obj.rfm(:,:,i);
-                [recon p1 p2] = kspaceLineRecon(sensor_data, dx, obj.dt, ...
+                sensor_data(1:dimY,padX+1:padX+dimX)=obj.rfm(:,:,i);
+                [recon] = kspaceLineRecon(sensor_data, dx, obj.dt, ...
                     obj.medium.sound_speed, 'Interp', '*linear');  
                 
-                obj.p0_recon_FT(:,:,i) = recon(padY1+1:padY1+dimY,padX+1:padX+dimX);
+                obj.p0_recon_FT(:,:,i) = recon(1:dimY,padX+1:padX+dimX);
             end
-            close(h);
-            
-            if plot_fig
-            fs=obj.acq.fs;
-            dk=1/(6E-3/dimX);
-            freq=0:(fs/size(sensor_data,1)):fs/2;
-            k=0:(dk/size(sensor_data,2)):dk/2;
-            fig=figure('Position', [100 100 1400 900],'Visible','on');            
-            colormap('gray');
-            subplot(2,5,[1 6]);
-            imagesc(sensor_data);
-            title('Raw');
-            caxis([-100 100])
-            ax = gca; ax.XTick =[  ] ; ax.YTick = [];
-            xlabel('Lateral');
-            ylabel('Depth');  
-            
-            sb=subplot(2,5,[2 7]);
-            colormap(sb,'parula');
-            imagesc(fs,k,log(abs(p1)));
-            title('log(FT)')
-            caxis([13 17])
-%             ax = gca; ax.XTick =[] ; ax.YTick = [0 1 2 3];
-            xlabel('$k_x$','Interpreter','LaTex');
-            ylabel('$\omega$','Interpreter','LaTex');  
-            
-            sb=subplot(2,5,[3 8]);
-            colormap(sb,'parula');
-            imagesc(log(abs(p2)));
-            title('log(FT) dispersion corrected')
-            caxis([13 17])
-            ax = gca; ax.XTick =[] ; ax.YTick = [];
-            xlabel('$k_x$','Interpreter','LaTex');
-            ylabel('$k_y$','Interpreter','LaTex');  
-            
-            subplot(2,5,[4 9]);
-            imagesc(recon);
-            title('Reconstruction')
-            caxis([-100 100])
-            ax = gca; ax.XTick =[] ; ax.YTick = [];
-            xlabel('Lateral');
-            ylabel('Depth');  
-            
-            subplot(2,5,5);
-            imagesc(obj.X,obj.Y,recon(padY1+1:padY1+dimY,padX+1:padX+dimX));
-            title('Reconstruction')
-            ylim([4 9]);xlim([-2 2]);
-            caxis([-100 100])
-            xlabel('Lateral (mm)');
-            ylabel('Depth (mm)');  
-            
-            subplot(2,5,10);
-            imagesc(obj.X,obj.Y,obj.p0_recon_TR(:,:,1));
-            title('Time Reversal')
-            caxis([-100 100])
-            ylim([4 9]);xlim([-2 2]);
-            xlabel('Lateral (mm)');
-            ylabel('Depth (mm)');  
-            
-            figname = [obj.pathname,'/FT_PadY1',num2str(padY1),...
-                'PadY2',num2str(padY2),'PadX',num2str(padX),'_xcorr.png'];
-            set(gcf,'PaperPositionMode','auto')
-            print(fig,figname,'-dpng','-r0')
-%             close(fig);
-            end
+            close(h);            
+      
             if save_opt
                 disp('Saving..');
                 obj.Save()
