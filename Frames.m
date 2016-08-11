@@ -70,6 +70,7 @@ classdef Frames < handle
         p0_recon
         p0_recon_TR %reconstruction using time reversal
         p0_recon_FT %reconstruction using fourier transform
+        p0_recon_BF %reconstruction using beam forming
         QS1 %number of initial points to discard: Frame 1
         QS2 %number of initial points to discard: Frame 2
         
@@ -373,6 +374,50 @@ classdef Frames < handle
             end
             obj.p0_recon = obj.p0_recon_FT;
         end
+        function BF(obj,N) %Reconstruction via beam forming
+            %Code From Pim van den Berg (University of Twente)
+            if ~N
+                N=size(obj.rfm,3);
+            end
+            obj.p0_recon_BF=zeros(size(obj.rfm,1),size(obj.rfm,2),N);
+            
+            rows=size(obj.rfm,1);
+            columns=size(obj.rfm,2);                       
+            pitch = obj.RF.pitch*1E-3.* obj.acq.fs/obj.RF.speed_of_sound;            
+
+            h = waitbar(0, 'Initialising Waitbar');
+            msg='Computing Beam Forming...';
+            for i=1:N
+                data=squeeze(obj.rfm(:,:,i));
+                waitbar(i/N,h,msg);
+                for channel_i = 1:columns % for every channel
+                    result_xx = zeros(1,rows);
+                    for dy = 1:rows % for all rows
+                        for dx = 1:columns
+                            if(dx ~= channel_i) % for all off_axis image points
+                                delta_x = (channel_i - dx) * pitch; % Pythagoras
+                                delta_y = dy;
+                                % distance from imagepoint to element:
+                                l = sqrt(delta_x^2 + delta_y^2);
+                                l = round(l); % rounding distance
+                                % to whole sample point,
+                                % no interpolation
+                                % check that distance is within recon area:
+                                if(l >= 1 && l <= rows)
+                                    result_xx(dy) = result_xx(dy) + data(l,dx); % sum image points
+                                end
+                            else % for the on-axis image points
+                                result_xx(dy) = result_xx(dy) + data(dy, channel_i); % sum image points
+                            end
+                        end
+                    end
+                    obj.p0_recon_BF(:, channel_i, i) = result_xx;
+                end
+            end
+            close(h);
+            obj.p0_recon = obj.p0_recon_BF;
+            
+        end
         %Filter
         function LoadRecon(obj,varargin)
             if ~isempty(varargin)
@@ -381,12 +426,15 @@ classdef Frames < handle
                         obj.p0_recon = obj.p0_recon_FT;
                     case 'TR'
                         obj.p0_recon = obj.p0_recon_TR;
+                    case 'BF'
+                        obj.p0_recon = obj.p0_recon_BF;
                     otherwise
                         error('Unknown optional input');
                 end
             else
                 obj.p0_recon = obj.p0_recon_FT;
             end
+            
             
         end
         function Wallfilter(obj)
@@ -517,8 +565,8 @@ classdef Frames < handle
                     Im3=obj.p0_recon(:,:,1);
                     title2='Filtered Reconstruction';
                 else
-                    Im2=obj.p0_recon_TR(:,:,1);
-                    title1='Time Reversal';
+                    Im2=obj.p0_recon_BF(:,:,1);
+                    title1='Beam Forming';
                     Im3=obj.p0_recon_FT(:,:,1);
                     title2='Fourier Transform';
                 end
@@ -538,6 +586,7 @@ classdef Frames < handle
             imagesc(obj.X,obj.Y,Im2);
             title(title1);
             caxis([-40 40])
+            caxis([-380 380])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            
             
