@@ -1,4 +1,4 @@
-pathname = uigetdir('C:\Users\LABPC_TB\Documents\TransducerMeasurements\201605\');
+pathname = uigetdir('/Users/Thore/Documents/LabData/Transducer Measurements/160707LinArray/');
 cases=struct2cell(dir(pathname));
 cases=cases(1,3:end);
 v_meas=cell(2,1);
@@ -30,13 +30,13 @@ for i=1:length(cases)
         v_meas{1} = [v_meas{1},PAFrames.xc_flw];
         e_meas{1} = [e_meas{1},PAFrames.xc_flw_std];  
         
-        PAFrames.LoadRecon('TR');
+        PAFrames.LoadRecon('BF'); 
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
         PAFrames.Save;
 
-        v_all{2} = [v_all{2},PAFrames.xc_all];
+        v_all{2} = [v_all{2},{PAFrames.xc_all}];
         v_meas{2} = [v_meas{2},PAFrames.xc_flw];
         e_meas{2} = [e_meas{2},PAFrames.xc_flw_std];
         

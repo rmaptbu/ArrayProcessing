@@ -295,7 +295,7 @@ classdef Frames < handle
             obj.KWaveInit('Upsample',2);
             obj.Detrend();
             obj.FT(0);
-            obj.TR(0);
+            obj.BF(0);
 %             obj.Highpass(5,1);
 %             obj.Wallfilter();
 %             obj.PlotRFM('Filter',1)            
