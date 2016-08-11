@@ -79,9 +79,11 @@ classdef Frames < handle
         xc_raw_min
         xc_disp %cross correlation displacement map
         xc_amp %cross correlation amplitude map
+        xc_amp_me
         xc_mask
         xc_flw %calculated flow speed
         xc_flw_std %standard deviation of flow speed
+        xc_all %all flow speed measurements
         
         %k-Wave settings
         kgrid
@@ -292,9 +294,8 @@ classdef Frames < handle
             obj.QSCorrect('QS1',580,'QS2',580);
             obj.KWaveInit('Upsample',2);
             obj.Detrend();
-            obj.FT(1);
-            obj.TR(1);
-            obj.PlotRFM;
+            obj.FT(0);
+            obj.TR(0);
 %             obj.Highpass(5,1);
 %             obj.Wallfilter();
 %             obj.PlotRFM('Filter',1)            
@@ -516,8 +517,10 @@ classdef Frames < handle
             M = max(xc_stack,[],1);
             M = squeeze(M);
             M = min(M,[],3);
+            me = median(M,3);
             obj.FindShift();
             obj.xc_amp = M';
+            obj.xc_amp_me = me';
             
             %deconvolve xcorr amplitude
             kernel=ones(x_corr.IW,1);
@@ -833,6 +836,7 @@ classdef Frames < handle
             obj.xc_mask(1:cut,:) = false;
             
             x = obj.xc_disp(obj.xc_mask);
+            obj.xc_all = x;
             obj.xc_flw = median(x);
             obj.xc_flw_std = std(x);
             
