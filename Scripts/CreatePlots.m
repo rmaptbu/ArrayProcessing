@@ -80,7 +80,7 @@ errorbar(v, -v_meas{1}, e_meas{1});
 errorbar(v, -v_meas{2}, e_meas{2});
 errorbar(v, -v_meas{3}, e_meas{3});
 errorbar(v, -v_meas{4}, e_meas{4});
-legend('Known', 'FT', 'TR', 'BF', 'Raw');
+legend(leg{:});
 xlabel('Set Flow Speed (mm/s)');
 ylabel('Measured Flow Speed (mm/s)');
 
@@ -96,10 +96,10 @@ figure; hold on; box on; grid on
 xlabel('Set Flow Speed (mm/s)');
 ylabel('Measured Flow Speed (mm/s)');
 title(leg(s+1));
-boxplot(a, v_map)
-plot(v,'.-')
+boxplot(-a, v_map)
+plot(-v,'.-')
 for i=1:length(v)
-    text(i, v(i)+10, num2str(length(v_all{s}{i})), 'HorizontalAlignment', 'center');
+    text(i, -v(i)+10, num2str(length(v_all{s}{i})), 'HorizontalAlignment', 'center');
 end
 end
 
