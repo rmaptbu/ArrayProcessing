@@ -72,6 +72,8 @@ for i=1:length(cases)
 end
 save([pathname,'/meas2.mat'],'v','v_meas','e_meas', 'v_all')
 
+leg={'Known', 'FT', 'TR', 'BF', 'Raw'};
+
 figure; hold on; box on
 plot(v,v);
 errorbar(v, -v_meas{1}, e_meas{1});
@@ -81,6 +83,23 @@ errorbar(v, -v_meas{4}, e_meas{4});
 legend('Known', 'FT', 'TR', 'BF', 'Raw');
 xlabel('Set Flow Speed (mm/s)');
 ylabel('Measured Flow Speed (mm/s)');
- 
- 
+
+for s=1:length(v_all)
+v_map=[];
+for i=1:length(v_all{s});
+    for j=1:length(v_all{s}{i})
+    v_map=[v_map,v(i)];
+    end
+end
+a=cell2mat(v_all{s}');
+figure; hold on; box on; grid on
+xlabel('Set Flow Speed (mm/s)');
+ylabel('Measured Flow Speed (mm/s)');
+title(leg(s+1));
+boxplot(a, v_map)
+plot(v,'.-')
+for i=1:length(v)
+    text(i, v(i)+10, num2str(length(v_all{s}{i})), 'HorizontalAlignment', 'center');
+end
+end
 
