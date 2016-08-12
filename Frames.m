@@ -152,7 +152,7 @@ classdef Frames < handle
             obj.dt=1/obj.acq.fs;
             
             %nrl=number of lines, nrs=number of samples
-            Nx = obj.finfo.nrl;  % number of grid points in the x (row) direction
+            Nx = size(obj.rfm,2);  % number of grid points in the x (row) direction
             Ny = size(obj.rfm,1);  % number of grid points in the y (column) direction
             dx = obj.RF.pitch*1E-3;    % grid point spacing in the x direction [m]
             dy = c*obj.dt;         % grid point spacing in the y direction [m]
@@ -170,7 +170,6 @@ classdef Frames < handle
             Nx = Nx*N;
             obj.Upsample(N);
 
-            
             obj.kgrid = makeGrid(Nx, dx, Ny, dy);
           
             obj.medium.sound_speed = c;	% [m/s]
