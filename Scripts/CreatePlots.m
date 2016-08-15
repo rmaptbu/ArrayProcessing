@@ -1,9 +1,9 @@
 pathname = uigetdir('C:\Users\LABPC_TB\Documents\TransducerMeasurements\201605\16-05-12c -- Final alignment 1064\');
 cases=struct2cell(dir(pathname));
 cases=cases(1,3:end);
-v_meas=cell(2,1);
-v_all=cell(2,1);
-e_meas=cell(2,1);
+v_meas=cell(4,1);
+v_all=cell(4,1);
+e_meas=cell(4,1);
 v=[];
 
 for i=1:length(cases)    
@@ -20,12 +20,10 @@ for i=1:length(cases)
         v=[v,flow_rate/A*1000/60];
         
         PAFrames.KWaveInit;
-        if isempty(PAFrames.p0_recon_BF) 
         PAFrames.BF(0); 
-        end
-        if isempty(PAFrames.p0_recon_FT)
         PAFrames.FT(0); 
-        end
+        PAFrames.PlotRFM('SaveFig',true);
+
         if isempty(PAFrames.p0_recon_TR)
         PAFrames.TR(0); 
         end
@@ -34,7 +32,7 @@ for i=1:length(cases)
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-               
+        PAFrames.PlotXC('SaveFig',true,'FigName','XC_FT');       
         v_all{1} = [v_all{1},{PAFrames.xc_all}];
         v_meas{1} = [v_meas{1},PAFrames.xc_flw];
         e_meas{1} = [e_meas{1},PAFrames.xc_flw_std];  
@@ -43,7 +41,7 @@ for i=1:length(cases)
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-
+        PAFrames.PlotXC('SaveFig',true,'FigName','XC_TR');  
         v_all{2} = [v_all{2},{PAFrames.xc_all}];
         v_meas{2} = [v_meas{2},PAFrames.xc_flw];
         e_meas{2} = [e_meas{2},PAFrames.xc_flw_std];
@@ -52,7 +50,7 @@ for i=1:length(cases)
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-               
+        PAFrames.PlotXC('SaveFig',true,'FigName','XC_BF');         
         v_all{3} = [v_all{3},{PAFrames.xc_all}];
         v_meas{3} = [v_meas{3},PAFrames.xc_flw];
         e_meas{3} = [e_meas{3},PAFrames.xc_flw_std];  
@@ -61,7 +59,7 @@ for i=1:length(cases)
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-               
+        PAFrames.PlotXC('SaveFig',true,'FigName','XC_RAW');         
         v_all{4} = [v_all{4},{PAFrames.xc_all}];
         v_meas{4} = [v_meas{4},PAFrames.xc_flw];
         e_meas{4} = [e_meas{4},PAFrames.xc_flw_std];  

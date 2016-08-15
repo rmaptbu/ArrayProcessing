@@ -297,8 +297,8 @@ classdef Frames < handle
             obj.QSCorrect('QS1',580,'QS2',580);
             obj.KWaveInit('Upsample',2);
             obj.Detrend();
-            obj.FT(0);
-            obj.BF(0);
+%             obj.FT(0);
+%             obj.BF(0);
 %             obj.Highpass(5,1);
 %             obj.Wallfilter();
 %             obj.PlotRFM('Filter',1)            
@@ -615,7 +615,7 @@ classdef Frames < handle
             
             if SaveFig
                 if ~figname
-                    figname = [obj.pathname,'/',obj.filename,'Del',num2str(obj.QS1),'.png'];
+                    figname = [obj.pathname,'/',obj.filename,'RFM.png'];
                 else
                     figname = [obj.pathname,'/',figname,'.png'];
                 end
@@ -664,7 +664,7 @@ classdef Frames < handle
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
             load('cm_surf.mat');
-            caxis([-2*v 2*v])
+            caxis([-4*v 4*v])
 %             caxis([-2 2]);
             colormap(sb1,cm_surf);
             c=colorbar;
@@ -691,9 +691,10 @@ classdef Frames < handle
                 title(['Masked estimate: ',num2str(obj.xc_flw),'mm/s']);
                 xlabel('Lateral (mm)');
                 ylabel('Depth (mm)');
-                caxis([-2*v 2*v])
+                caxis([-4*v 4*v])
                 colormap(sb3,cm_surf);
                 c=colorbar;
+                ylim([4 9]);xlim([-2 2]);
                 ylabel(c,'Flow Speed (mm/s)');
             end
             
