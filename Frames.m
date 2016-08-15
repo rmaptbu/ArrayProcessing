@@ -135,9 +135,25 @@ classdef Frames < handle
                 warning('There is no backup RF data stored.')
             end
         end %Load RF data from internal backup
-        function KWaveInit(obj, varargin) %Setup for k-wave toolbox
+        function KWaveInit(obj, varargin) %Setup for k-wave toolbox   
+            c = obj.RF.speed_of_sound;
+            obj.dt=1/obj.acq.fs;
+            
+            %nrl=number of lines, nrs=number of samples
+            Nx = size(obj.rfm,2);  % number of grid points in the x (row) direction
+            Ny = size(obj.rfm,1);  % number of grid points in the y (column) direction
+            dx = obj.RF.pitch*1E-3;    % grid point spacing in the x direction [m]
+            dx = dx/(Nx/size(obj.rfm_b,2));  % account for previous upsampling
+            dy = c*obj.dt;         % grid point spacing in the y direction [m]
+                      
+            q=1;
             if ~isempty(varargin)
-                for input_index = 1:2:length(varargin)
+                if isnumeric(varargin{1});
+                    Nx = varargin{1};
+                    Ny = varargin{2};                
+                    q=3;
+                end
+                for input_index = q:2:length(varargin)
                     switch varargin{input_index}
                         case 'Upsample'
                             upsample = varargin{input_index + 1};
@@ -146,29 +162,17 @@ classdef Frames < handle
                     end
                 end
             end
-            
-            
-            c = obj.RF.speed_of_sound;
-            obj.dt=1/obj.acq.fs;
-            
-            %nrl=number of lines, nrs=number of samples
-            Nx = size(obj.rfm,2);  % number of grid points in the x (row) direction
-            Ny = size(obj.rfm,1);  % number of grid points in the y (column) direction
-            dx = obj.RF.pitch*1E-3;    % grid point spacing in the x direction [m]
-            dy = c*obj.dt;         % grid point spacing in the y direction [m]
-            
+                       
             %Upsampling
             %If not specified, choose value to make grid as close to square
             %as possible
-            if ~exist('upsample','var')
-            %no upsample
-            N = 1;
-            else
+            if exist('upsample','var')
                 N = upsample;
+                dx = dx/N;
+                Nx = Nx*N;
+                obj.Upsample(N);
             end
-            dx = dx/N;
-            Nx = Nx*N;
-            obj.Upsample(N);
+            
 
             obj.kgrid = makeGrid(Nx, dx, Ny, dy);
           
@@ -310,6 +314,8 @@ classdef Frames < handle
             obj.p0_recon_TR=zeros(size(obj.rfm,1),size(obj.rfm,2),N);
             h = waitbar(0, 'Initialising Waitbar');
             msg='Computing time reversal...';
+            obj.KWaveInit;
+            
             for i=1:N
                 waitbar(i/N,h,msg);
                 sensor_data=obj.rfm(:,:,i)';
@@ -330,7 +336,7 @@ classdef Frames < handle
             if ~N
                 N=size(obj.rfm,3);
             end
-            padX=1.5*size(obj.rfm,2); %zero padding outside of frame to prevent wrapping         
+            padX=.5*size(obj.rfm,2); %zero padding outside of frame to prevent wrapping         
             padY=0;
 
             save_opt = 0;
@@ -355,6 +361,9 @@ classdef Frames < handle
             dimX=size(obj.rfm(:,:,1),2);
             dimY=size(obj.rfm(:,:,1),1);            
             sensor_data=zeros(padY+dimY,2*padX+dimX);
+            
+            obj.KWaveInit(size(sensor_data,2),size(sensor_data,1));
+                        
             for i=1:N
                 waitbar(i/N,h,msg);
                 disp(i/N)    
@@ -364,9 +373,8 @@ classdef Frames < handle
                 
                 obj.p0_recon_FT(:,:,i) = recon(1:dimY,padX+1:padX+dimX);
             end
-            close(h);            
-      
-
+            close(h); 
+            
             if save_opt
                 disp('Saving..');
                 obj.Save()
@@ -383,7 +391,8 @@ classdef Frames < handle
             
             rows=size(obj.rfm,1);
             columns=size(obj.rfm,2);                       
-            pitch = obj.RF.pitch*1E-3.* obj.acq.fs/obj.RF.speed_of_sound;            
+            pitch = obj.RF.pitch*1E-3.* obj.acq.fs/obj.RF.speed_of_sound; 
+            pitch = pitch/(size(obj.rfm,2)/size(obj.rfm_b,2));
 
             h = waitbar(0, 'Initialising Waitbar');
             msg='Computing Beam Forming...';
@@ -588,7 +597,7 @@ classdef Frames < handle
             imagesc(obj.X,obj.Y,Im2);
             title(title1);
             caxis([-40 40])
-            caxis([-380 380])
+            caxis([-2000 2000])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            
             
