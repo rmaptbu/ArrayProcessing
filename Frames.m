@@ -328,15 +328,13 @@ classdef Frames < handle
             end
             close(h);
             obj.p0_recon = obj.p0_recon_TR;
-%             disp('Saving..');
-%             obj.Save()
             disp('Done.');
         end
         function FT(obj,N,varargin) %Reconstruction via fourier transform
             if ~N
                 N=size(obj.rfm,3);
             end
-            padX=.5*size(obj.rfm,2); %zero padding outside of frame to prevent wrapping         
+            padX=1.5*size(obj.rfm,2); %zero padding outside of frame to prevent wrapping         
             padY=0;
 
             save_opt = 0;
@@ -569,7 +567,7 @@ classdef Frames < handle
                 Im3=mean(obj.p0_recon_FT,3);
                 title2='Avg Fourier Transform';
             else                
-                Im1=obj.rfm(:,:,1);
+                Im1=obj.p0_recon_TR(:,:,1);   
                 if filt
                     Im2=obj.p0_recon_FT(:,:,1);
                     title1='Unfiltered Reconstruction';
@@ -588,8 +586,8 @@ classdef Frames < handle
             
             subplot(1,3,1)
             imagesc(obj.X,obj.Y,Im1);
-            title('Raw');
-            caxis([-40 40])
+            title('Time Reversal');
+            caxis([-150 150])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            
             
@@ -597,7 +595,7 @@ classdef Frames < handle
             imagesc(obj.X,obj.Y,Im2);
             title(title1);
             caxis([-40 40])
-            caxis([-2000 2000])
+            caxis([-3000 3000])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            
             
