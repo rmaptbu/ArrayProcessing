@@ -380,11 +380,18 @@ classdef Frames < handle
             end
             obj.p0_recon = obj.p0_recon_FT;
         end
-        function BF(obj,N) %Reconstruction via beam forming
+        function BF(obj,N,varargin) %Reconstruction via beam forming
             %Code From Pim van den Berg (University of Twente)
             if ~N
                 N=size(obj.rfm,3);
             end
+            if ~isempty(varargin)
+                aptr=varargin{1};
+            else
+                aptr=size(obj.rfm,2);
+            end
+            aptr=ceil((aptr-1)/2.0);
+            
             obj.p0_recon_BF=zeros(size(obj.rfm,1),size(obj.rfm,2),N);
             
             rows=size(obj.rfm,1);
@@ -402,6 +409,7 @@ classdef Frames < handle
                     for dy = 1:rows % for all rows
                         for dx = 1:columns
                             if(dx ~= channel_i) % for all off_axis image points
+                                if abs(channel_i - dx) <= aptr
                                 delta_x = (channel_i - dx) * pitch; % Pythagoras
                                 delta_y = dy;
                                 % distance from imagepoint to element:
@@ -412,6 +420,7 @@ classdef Frames < handle
                                 % check that distance is within recon area:
                                 if(l >= 1 && l <= rows)
                                     result_xx(dy) = result_xx(dy) + data(l,dx); % sum image points
+                                end
                                 end
                             else % for the on-axis image points
                                 result_xx(dy) = result_xx(dy) + data(dy, channel_i); % sum image points
