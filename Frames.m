@@ -531,8 +531,9 @@ classdef Frames < handle
             disp(size(xc_stack));
             M = max(xc_stack,[],1);
             M = squeeze(M);
-            M = min(M,[],3);
             me = median(M,3);
+            M = min(M,[],3);
+            
             obj.FindShift();
             obj.xc_amp = M';
             obj.xc_amp_me = me';
