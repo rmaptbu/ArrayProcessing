@@ -533,7 +533,7 @@ classdef Frames < handle
             M = squeeze(M);
             me = median(M,3);
             M = min(M,[],3);
-
+            
             obj.FindShift();
             obj.xc_amp = M'; %minimum intensity... 
             obj.xc_amp_me = me'; %or median projection
