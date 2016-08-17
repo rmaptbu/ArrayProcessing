@@ -533,10 +533,10 @@ classdef Frames < handle
             M = squeeze(M);
             me = median(M,3);
             M = min(M,[],3);
-            
+
             obj.FindShift();
-            obj.xc_amp = M';
-            obj.xc_amp_me = me';
+            obj.xc_amp = M'; %minimum intensity... 
+            obj.xc_amp_me = me'; %or median projection
             
             %deconvolve xcorr amplitude
             kernel=ones(x_corr.IW,1);

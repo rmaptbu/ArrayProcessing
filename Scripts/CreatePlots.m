@@ -1,10 +1,12 @@
 pathname = uigetdir('C:\Users\LABPC_TB\Documents\TransducerMeasurements\201605\16-05-12c -- Final alignment 1064\');
 cases=struct2cell(dir(pathname));
 cases=cases(1,3:end);
-v_meas=cell(4,1);
-v_all=cell(4,1);
-e_meas=cell(4,1);
+v_meas=cell(32,1);
+v_all=cell(32,1);
+e_meas=cell(32,1);
 v=[];
+
+mode='aptr';
 
 for i=1:length(cases)    
     path=[pathname,'/',cases{i}];
@@ -19,68 +21,43 @@ for i=1:length(cases)
         cd(currentpath);
         v=[v,flow_rate/A*1000/60];
         
-        PAFrames.KWaveInit;
-        PAFrames.BF(0); 
-        PAFrames.FT(0); 
-        PAFrames.PlotRFM('SaveFig',true);
-
-        if isempty(PAFrames.p0_recon_TR)
-        PAFrames.TR(0); 
+        PAFrames.Init
+        leg={};
+        for aptr=1:32
+            aperture=aptr*4;
+            PAFrames.BF(0,aperture);
+            PAFrames.LoadRecon('BF');
+            PAFrames.Highpass(5,1);
+            PAFrames.Wallfilter;
+            PAFrames.EnsembleCorrelation;
+            PAFrames.PlotRecon(2,'SaveFig',true,'FigName',['Recon_BF',mode,num2str(aptr)]);
+            PAFrames.PlotXC('SaveFig',true,'FigName',['XC_BF',mode,num2str(aptr)]);
+            v_all{aptr} = [v_all{aptr},{PAFrames.xc_all}];
+            v_meas{aptr} = [v_meas{aptr},PAFrames.xc_flw];
+            e_meas{aptr} = [e_meas{aptr},PAFrames.xc_flw_std];
+            leg{aptr} = num2str(aperture);
         end
-        
-        PAFrames.LoadRecon('FT');
-        PAFrames.Highpass(5,1);
-        PAFrames.Wallfilter;
-        PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true,'FigName','XC_FT');       
-        v_all{1} = [v_all{1},{PAFrames.xc_all}];
-        v_meas{1} = [v_meas{1},PAFrames.xc_flw];
-        e_meas{1} = [e_meas{1},PAFrames.xc_flw_std];  
-        
-        PAFrames.LoadRecon('TR'); 
-        PAFrames.Highpass(5,1);
-        PAFrames.Wallfilter;
-        PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true,'FigName','XC_TR');  
-        v_all{2} = [v_all{2},{PAFrames.xc_all}];
-        v_meas{2} = [v_meas{2},PAFrames.xc_flw];
-        e_meas{2} = [e_meas{2},PAFrames.xc_flw_std];
-        
-        PAFrames.LoadRecon('BF');
-        PAFrames.Highpass(5,1);
-        PAFrames.Wallfilter;
-        PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true,'FigName','XC_BF');         
-        v_all{3} = [v_all{3},{PAFrames.xc_all}];
-        v_meas{3} = [v_meas{3},PAFrames.xc_flw];
-        e_meas{3} = [e_meas{3},PAFrames.xc_flw_std];  
-        
-        PAFrames.p0_recon = PAFrames.rfm;
-        PAFrames.Highpass(5,1);
-        PAFrames.Wallfilter;
-        PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true,'FigName','XC_RAW');         
-        v_all{4} = [v_all{4},{PAFrames.xc_all}];
-        v_meas{4} = [v_meas{4},PAFrames.xc_flw];
-        e_meas{4} = [e_meas{4},PAFrames.xc_flw_std];  
-        
-        PAFrames.Save;
         
     end
 end
-save([pathname,'/meas2.mat'],'v','v_meas','e_meas', 'v_all')
+save([pathname,'/meas',mode,'.mat'],'v','v_meas','e_meas', 'v_all')
 
-leg={'Known', 'FT', 'TR', 'BF', 'Raw'};
 
-figure; hold on; box on
+fig=figure; hold on; box on
 plot(v,v);
-errorbar(v, -v_meas{1}, e_meas{1});
-errorbar(v, -v_meas{2}, e_meas{2});
-errorbar(v, -v_meas{3}, e_meas{3});
-errorbar(v, -v_meas{4}, e_meas{4});
+for i=1:5:32
+errorbar(v, -v_meas{i}, e_meas{i});
+end
 legend(leg{:});
 xlabel('Set Flow Speed (mm/s)');
 ylabel('Measured Flow Speed (mm/s)');
+
+figname = [pathname,'/measPlot',mode];
+set(gcf,'PaperPositionMode','auto')
+print(fig,[figname,'.png'],'-dpng','-r0')
+savefig(fig,[figname,'.fig'])
+% close(fig);
+
 
 for s=1:length(v_all)
 v_map=[];
@@ -90,14 +67,20 @@ for i=1:length(v_all{s});
     end
 end
 a=cell2mat(v_all{s}');
-figure; hold on; box on; grid on
+fig=figure; hold on; box on; grid on
 xlabel('Set Flow Speed (mm/s)');
 ylabel('Measured Flow Speed (mm/s)');
-title(leg(s+1));
+title(leg(s));
 boxplot(-a, v_map)
-plot(-v,'.-')
+plot(v,'.-')
 for i=1:length(v)
-    text(i, -v(i)+10, num2str(length(v_all{s}{i})), 'HorizontalAlignment', 'center');
+    text(i, v(i)+10, num2str(length(v_all{s}{i})), 'HorizontalAlignment', 'center');
 end
+figname = [pathname,'/BoxPlot',num2str(s),mode];
+set(gcf,'PaperPositionMode','auto')
+print(fig,[figname,'.png'],'-dpng','-r0')
+savefig(fig,[figname,'.fig'])
+close(fig);
+
 end
 
