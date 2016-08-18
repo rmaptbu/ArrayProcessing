@@ -38,7 +38,7 @@ for i=1:length(cases)
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true,'FigName','XC_FT');       
+        PAFrames.PlotXC('SaveFig',true,'FigName','XC_FTm');       
         v_all{1} = [v_all{1},{PAFrames.xc_all}];
         v_meas{1} = [v_meas{1},PAFrames.xc_flw];
         e_meas{1} = [e_meas{1},PAFrames.xc_flw_std];  
@@ -47,7 +47,7 @@ for i=1:length(cases)
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true,'FigName','XC_TR');  
+        PAFrames.PlotXC('SaveFig',true,'FigName','XC_TRm');  
         v_all{2} = [v_all{2},{PAFrames.xc_all}];
         v_meas{2} = [v_meas{2},PAFrames.xc_flw];
         e_meas{2} = [e_meas{2},PAFrames.xc_flw_std];
@@ -56,7 +56,7 @@ for i=1:length(cases)
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true,'FigName','XC_BF');         
+        PAFrames.PlotXC('SaveFig',true,'FigName','XC_BFm');         
         v_all{3} = [v_all{3},{PAFrames.xc_all}];
         v_meas{3} = [v_meas{3},PAFrames.xc_flw];
         e_meas{3} = [e_meas{3},PAFrames.xc_flw_std];  
@@ -65,7 +65,7 @@ for i=1:length(cases)
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
         PAFrames.EnsembleCorrelation;
-        PAFrames.PlotXC('SaveFig',true,'FigName','XC_RAW');         
+        PAFrames.PlotXC('SaveFig',true,'FigName','XC_RAWm');         
         v_all{4} = [v_all{4},{PAFrames.xc_all}];
         v_meas{4} = [v_meas{4},PAFrames.xc_flw];
         e_meas{4} = [e_meas{4},PAFrames.xc_flw_std];  
@@ -74,18 +74,18 @@ for i=1:length(cases)
         
     end
 end
-save([pathname,'/meas2.mat'],'v','v_meas','e_meas', 'v_all')
+save([pathname,'/meas2_m.mat'],'v','v_meas','e_meas', 'v_all')
 
 leg={'Known', 'FT', 'TR', 'BF', 'Raw'};
 
 figure; hold on; box on
-[v,I]=sort(v);
+[v,i]=sort(v);
 plot(v,v);
 errorbar(v, -v_meas{1}(i), e_meas{1}(i));
 errorbar(v, -v_meas{2}(i), e_meas{2}(i));
 errorbar(v, -v_meas{3}(i), e_meas{3}(i));
 errorbar(v, -v_meas{4}(i), e_meas{4}(i));
-legend(leg{:});
+legend(leg{:},'Location','northwest');
 xlabel('Set Flow Speed (mm/s)');
 ylabel('Measured Flow Speed (mm/s)');
 

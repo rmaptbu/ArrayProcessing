@@ -856,14 +856,15 @@ classdef Frames < handle
                 obj.xc_mask(1:cut,:) = false;
             else
                 obj.xc_mask=zeros(size(obj.xc_amp));
-                X=interp1(1:length(obj.X),obj.X,...
+                x=interp1(1:length(obj.X),obj.X,...
                     1:length(obj.X)/size(obj.xc_mask,2):length(obj.X));
-                Y=interp1(1:length(obj.Y_xc),obj.Y_xc,...
+                y=interp1(1:length(obj.Y_xc),obj.Y_xc,...
                     1:length(obj.Y_xc)/size(obj.xc_mask,1):length(obj.Y_xc));
                 m = obj.xc_mask_manual;
-                Y_m=Y>m{2}(1) & Y<m{2}(2);
-                X_m=X>m{1}(1) & X<m{1}(2);
-                obj.xc_mask(Y_m, X_m)=1;
+                Y_m=y>m{2}(1) & y<m{2}(2);
+                X_m=x>m{1}(1) & x<m{1}(2);
+                obj.xc_mask(Y_m, X_m)=true;
+                obj.xc_mask=logical(obj.xc_mask);
             end
             
             x = obj.xc_disp(obj.xc_mask);
