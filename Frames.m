@@ -84,6 +84,7 @@ classdef Frames < handle
         xc_flw %calculated flow speed
         xc_flw_std %standard deviation of flow speed
         xc_all %all flow speed measurements
+        xc_mask_manual={}
         
         %k-Wave settings
         kgrid
@@ -97,6 +98,7 @@ classdef Frames < handle
         X %Ticks for X-axis scaling
         Y %Ticks for Y-axis scaling
         Y_xc %Ticks for Y-axis scaling of xcorrs
+        crop=[7 11]
     end
 
     methods
@@ -529,8 +531,8 @@ classdef Frames < handle
             %ensemble correlations:
             obj.xc_raw=squeeze(mean(xc_stack,4));
             disp(size(xc_stack));
-            M = max(xc_stack,[],1);
-            M = squeeze(M);
+            M = max(xc_stack,[],1);            
+            M = squeeze(M);   
             me = median(M,3);
             M = min(M,[],3);
             
@@ -680,7 +682,7 @@ classdef Frames < handle
             c=colorbar;
             ylabel(c,'Flow Speed (mm/s)');
 
-            ylim([4 9]);xlim([-2 2]);
+            ylim(obj.crop);xlim([-2 2]);
             
             sb2 = subplot(1,2+mask,2);
             imagesc(obj.X,obj.Y_xc,Im3);
@@ -692,7 +694,7 @@ classdef Frames < handle
             cmax=max(max(Im3(50:end,:)));
             caxis([cmin cmax])
             colorbar;
-            ylim([4 9]);xlim([-2 2]);
+            ylim([obj.crop]);xlim([-2 2]);
             
             if mask
                 Im4 = -1*obj.xc_mask.*obj.xc_disp;
@@ -704,6 +706,7 @@ classdef Frames < handle
                 caxis([-2*v 2*v])
                 colormap(sb3,cm_surf);
                 c=colorbar;
+                ylim([obj.crop]);xlim([-2 2]);
                 ylabel(c,'Flow Speed (mm/s)');
             end
             
@@ -751,7 +754,7 @@ classdef Frames < handle
             caxis([-120 120])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            
-            ylim([4 9]);xlim([-2 2]);
+            ylim([obj.crop]);xlim([-2 2]);
             
             subplot (1, 2, 2)
             colormap('gray');
@@ -760,7 +763,7 @@ classdef Frames < handle
             caxis([-120 120])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
-            ylim([4 9]);xlim([-2 2]);
+            ylim([obj.crop]);xlim([-2 2]);
             
             set(fig1, 'Position', [100 100 500 400]);
             if SaveFig
@@ -848,8 +851,22 @@ classdef Frames < handle
             %find mask
             m = max(max(obj.xc_amp(cut:end,:)));
             m = m/2;
-            obj.xc_mask = obj.xc_amp>m;
-            obj.xc_mask(1:cut,:) = false;
+            
+            if isempty(obj.xc_mask_manual)
+                obj.xc_mask = obj.xc_amp>m;
+                obj.xc_mask(1:cut,:) = false;
+            else
+                obj.xc_mask=zeros(size(obj.xc_amp));
+                x=interp1(1:length(obj.X),obj.X,...
+                    1:length(obj.X)/size(obj.xc_mask,2):length(obj.X));
+                y=interp1(1:length(obj.Y_xc),obj.Y_xc,...
+                    1:length(obj.Y_xc)/size(obj.xc_mask,1):length(obj.Y_xc));
+                m = obj.xc_mask_manual;
+                Y_m=y>m{2}(1) & y<m{2}(2);
+                X_m=x>m{1}(1) & x<m{1}(2);
+                obj.xc_mask(Y_m, X_m)=true;
+                obj.xc_mask=logical(obj.xc_mask);
+            end
             
             x = obj.xc_disp(obj.xc_mask);
             obj.xc_all = x;
