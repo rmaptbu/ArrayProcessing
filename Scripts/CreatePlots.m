@@ -1,6 +1,8 @@
 pathname = uigetdir('/Users/Thore/Documents/LabData/Transducer Measurements/160707LinArray/16-05-12b -- 1064 nm - 40p blood in PBS/001 Range of flows 65 ns low edge/data/');
 cases=struct2cell(dir(pathname));
 cases=cases(1,3:end);
+cf=pwd;
+cd(pathname);
 
 v_meas=cell(2,1);
 v_all=cell(2,1);
@@ -16,22 +18,21 @@ for i=1:length(cases)
     if exist(path,'dir')        
         disp(cases{i});
         [PAFrames, ~, ~] = LoadFiles('Path',path,'LoadExisting',1);
+        PAFrames.crop=[4 8];
         PAFrames.pathname=path;
         d=PAFrames.flw.tube_diameter; %(mm)
         A=pi*(d/2)^2;
         currentpath=pwd;cd(path);[~, flow_rate] = getFlowSettings();
         cd(currentpath);
-        v=[v,flow_rate/A*1000/60];
-        
+        v=[v,flow_rate/A*1000/60];        
 
         PAFrames.Init;
         if isempty(PAFrames.p0_recon_BF)
         PAFrames.BF(0); 
         end
         if isempty(PAFrames.p0_recon_FT)
-        PAFrames.FT(0);         end
-
-
+        PAFrames.FT(0);         
+        end
         
         PAFrames.PlotRFM('SaveFig',true);
         
@@ -60,21 +61,19 @@ for i=1:length(cases)
    end
 end
 save([pathname,'/meas',mode,'.mat'],'v','v_meas','e_meas', 'v_all')
+cd(cf);
 
+%%Plots
+leg={'Known','FT','BF'};
 
-
-figure; hold on; box on
-[v,i]=sort(v);
-plot(v,v);
-errorbar(v, -v_meas{1}(i), e_meas{1}(i));
-errorbar(v, -v_meas{2}(i), e_meas{2}(i));
-errorbar(v, -v_meas{3}(i), e_meas{3}(i));
-errorbar(v, -v_meas{4}(i), e_meas{4}(i));
+fig=figure; hold on; box on
+[ve,i]=sort(v);
+plot(ve,ve);
+errorbar(ve, -v_meas{1}(i), e_meas{1}(i));
+errorbar(ve, -v_meas{2}(i), e_meas{2}(i));
 legend(leg{:},'Location','northwest');
-
 xlabel('Set Flow Speed (mm/s)');
 ylabel('Measured Flow Speed (mm/s)');
-
 figname = [pathname,'/measPlot',mode];
 set(gcf,'PaperPositionMode','auto')
 print(fig,[figname,'.png'],'-dpng','-r0')
@@ -103,7 +102,7 @@ figname = [pathname,'/BoxPlot',num2str(s),mode];
 set(gcf,'PaperPositionMode','auto')
 print(fig,[figname,'.png'],'-dpng','-r0')
 savefig(fig,[figname,'.fig'])
-close(fig);
+% close(fig);
 
 end
 

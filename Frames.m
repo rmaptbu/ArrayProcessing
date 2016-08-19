@@ -98,7 +98,7 @@ classdef Frames < handle
         X %Ticks for X-axis scaling
         Y %Ticks for Y-axis scaling
         Y_xc %Ticks for Y-axis scaling of xcorrs
-        crop=[7 11]
+        crop=[4 8]
     end
 
     methods
@@ -474,6 +474,8 @@ classdef Frames < handle
         %Correlation
         function EnsembleCorrelation(obj,varargin)
             all_corrs = 0;
+            save_xc = false;
+            file = 'Ensemble';
             if isempty(varargin)
                 im_stack = obj.p0_recon;
             else
@@ -483,6 +485,8 @@ classdef Frames < handle
                         im_stack=obj.p0_recon_FT;
                     case 'TR'
                         im_stack=obj.p0_recon_TR;
+                    case 'BF'
+                        im_stack=obj.p0_recon_BF;
                     case 'Raw'
                         im_stack=obj.rfm;
                     case 'AllCorrelations'
@@ -490,6 +494,13 @@ classdef Frames < handle
                             im_stack = obj.p0_recon;
                         end
                         all_corrs = varargin{input_index + 1};
+                    case 'SaveCorrs'
+                        if ~exist('im_stack','var')
+                            im_stack = obj.p0_recon;
+                        end
+                        save_xc = varargin{input_index + 1};
+                    case 'FigName'
+                        file = varargin{input_index + 1};
                     otherwise
                         error ('Unkown Type: Select FT or TR')
                 end
@@ -530,7 +541,6 @@ classdef Frames < handle
             close(h);    
             %ensemble correlations:
             obj.xc_raw=squeeze(mean(xc_stack,4));
-            disp(size(xc_stack));
             M = max(xc_stack,[],1);            
             M = squeeze(M);   
             me = median(M,3);
@@ -546,6 +556,24 @@ classdef Frames < handle
             
             %estimate flow speed
             obj.FindFlow();
+            
+            if save_xc
+                ensemble=obj.xc_raw;
+                xc_stack_max = squeeze(max(xc_stack,[],1));  
+                mask = obj.xc_mask;
+                v_map = obj.xc_disp;
+                amp_map = obj.xc_amp;
+                x=interp1(1:length(obj.X),obj.X,...
+                    1:length(obj.X)/size(obj.xc_mask,2):length(obj.X));
+                y=interp1(1:length(obj.Y_xc),obj.Y_xc,...
+                    1:length(obj.Y_xc)/size(obj.xc_mask,1):length(obj.Y_xc));
+                v_pts = obj.xc_all;
+                v_median = obj.xc_flw;
+                v_std = obj.xc_flw_std;
+                save([obj.pathname,'/',file,'.mat'],'xc_stack_max',...
+                    'im_stack','ensemble','mask','v_map','x','y',...
+                    'v_pts','v_pts','v_std')
+            end
         end   
         %Graphical output
         function PlotRFM (obj, varargin)
