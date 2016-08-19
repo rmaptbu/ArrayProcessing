@@ -11,7 +11,7 @@ e_meas=cell(2,1);
 v=[];
 
 mode='';
-
+crop=[0 6];
 for i=1:length(cases)    
     path=[pathname,'/',cases{i}];
     disp(i/length(cases))
@@ -39,7 +39,7 @@ for i=1:length(cases)
         PAFrames.Save;          
         
         %Plot Ensemble Correlations     
-        PAFrames.crop=[4 8]; %region of interest
+        PAFrames.crop=crop; %region of interest
         PAFrames.xc_mask_manual={};
         mkdir('../fig');
         PAFrames.pathname=[pathname,'/../fig'];
@@ -117,7 +117,7 @@ figname = [pathname,'/../fig/BoxPlot',num2str(s),mode];
 set(gcf,'PaperPositionMode','auto')
 print(fig,[figname,'.png'],'-dpng','-r0')
 savefig(fig,[figname,'.fig'])
-% close(fig);
+close(fig);
 
 end
 
@@ -131,5 +131,10 @@ plot(obj.Y,obj.p0_recon_BF(:,m,1)/max(obj.p0_recon_BF(100:end,m,1)),'LineWidth',
 % plot(obj.Y,obj.p0_recon_TR(:,m,1)/max(obj.p0_recon_TR(100:end,m,1))+1,'LineWidth',2);
 plot(obj.Y,obj.p0_recon_FT(:,m,1)/max(obj.p0_recon_FT(100:end,m,1))+2,'LineWidth',2);
 legend('BF','TR','FT');
-xlim([4 8]);
+xlim(crop);
 xlabel('Depth (mm)');
+figname = [pathname,'/../fig/profile',mode];
+set(gcf,'PaperPositionMode','auto')
+print(fig,[figname,'.png'],'-dpng','-r0')
+savefig(fig,[figname,'.fig'])
+close(fig);
