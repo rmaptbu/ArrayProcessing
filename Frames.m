@@ -499,7 +499,7 @@ classdef Frames < handle
                             im_stack = obj.p0_recon;
                         end
                         save_xc = varargin{input_index + 1};
-                    case 'FigName'
+                    case 'FileName'
                         file = varargin{input_index + 1};
                     otherwise
                         error ('Unkown Type: Select FT or TR')

@@ -18,14 +18,17 @@ for i=1:length(cases)
     if exist(path,'dir')        
         disp(cases{i});
         [PAFrames, ~, ~] = LoadFiles('Path',path,'LoadExisting',1);
-        PAFrames.crop=[4 8];
-        PAFrames.pathname=path;
+        PAFrames.pathname=path;%make sure pathname is correct
+        
+        %find set flow speed
         d=PAFrames.flw.tube_diameter; %(mm)
-        A=pi*(d/2)^2;
-        currentpath=pwd;cd(path);[~, flow_rate] = getFlowSettings();
-        cd(currentpath);
-        v=[v,flow_rate/A*1000/60];        
-
+        A=pi*(d/2)^2;        
+        currentpath=pwd;cd(path);
+        [~, flow_rate] = getFlowSettings();
+        cd(currentpath);        
+        v=[v,flow_rate/A*1000/60];   
+        
+        %Setup reconstructions
         PAFrames.Init;
         if isempty(PAFrames.p0_recon_BF)
         PAFrames.BF(0); 
@@ -33,31 +36,43 @@ for i=1:length(cases)
         if isempty(PAFrames.p0_recon_FT)
         PAFrames.FT(0);         
         end
+        PAFrames.Save;          
         
-        PAFrames.PlotRFM('SaveFig',true);
+        %Plot Ensemble Correlations     
+        PAFrames.crop=[4 8]; %region of interest
+        PAFrames.xc_mask_manual={};
+        mkdir('../fig');
+        PAFrames.pathname=[pathname,'/../fig'];
+        
+        PAFrames.PlotRFM('SaveFig',true,'FigName',['recon',num2str(i)]);
         
         PAFrames.LoadRecon('FT');
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
-        PAFrames.EnsembleCorrelation;
+        PAFrames.pathname=path; 
+        PAFrames.EnsembleCorrelation('SaveCorrs',true);        
+        PAFrames.pathname=[pathname,'/../fig'];
 
-        PAFrames.PlotXC('SaveFig',true,'FigName','XC_FT');       
+        PAFrames.PlotXC('SaveFig',true,'FigName',['XC_FT',num2str(i)]);       
         v_all{1} = [v_all{1},{PAFrames.xc_all}];
         v_meas{1} = [v_meas{1},PAFrames.xc_flw];
-        e_meas{1} = [e_meas{1},PAFrames.xc_flw_std];  
+        e_meas{1} = [e_meas{1},PAFrames.xc_flw_std]; 
         
                 
         PAFrames.LoadRecon('BF');
         PAFrames.Highpass(5,1);
         PAFrames.Wallfilter;
-        PAFrames.EnsembleCorrelation;
+        PAFrames.pathname=path; 
+        PAFrames.EnsembleCorrelation('SaveCorrs',true); ;        
+        PAFrames.pathname=[pathname,'/../fig'];
 
-        PAFrames.PlotXC('SaveFig',true,'FigName','XC_BF');  
+        PAFrames.PlotXC('SaveFig',true,'FigName',['XC_BF',num2str(i)]);  
         v_all{2} = [v_all{2},{PAFrames.xc_all}];
         v_meas{2} = [v_meas{2},PAFrames.xc_flw];
         e_meas{2} = [e_meas{2},PAFrames.xc_flw_std];
-
-        PAFrames.Save;        
+        
+        %make sure pathname is correct
+        PAFrames.pathname=path;      
    end
 end
 save([pathname,'/meas',mode,'.mat'],'v','v_meas','e_meas', 'v_all')
@@ -92,13 +107,13 @@ a=cell2mat(v_all{s}');
 fig=figure; hold on; box on; grid on
 xlabel('Set Flow Speed (mm/s)');
 ylabel('Measured Flow Speed (mm/s)');
-title(leg(s));
+title(leg(s+1));
 boxplot(-a, v_map)
 plot(v,'.-')
 for i=1:length(v)
     text(i, v(i)+10, num2str(length(v_all{s}{i})), 'HorizontalAlignment', 'center');
 end
-figname = [pathname,'/BoxPlot',num2str(s),mode];
+figname = [pathname,'/../fig/BoxPlot',num2str(s),mode];
 set(gcf,'PaperPositionMode','auto')
 print(fig,[figname,'.png'],'-dpng','-r0')
 savefig(fig,[figname,'.fig'])
@@ -113,7 +128,7 @@ box on;
 grid on;
 title('Profile at centre line');
 plot(obj.Y,obj.p0_recon_BF(:,m,1)/max(obj.p0_recon_BF(100:end,m,1)),'LineWidth',2);
-plot(obj.Y,obj.p0_recon_TR(:,m,1)/max(obj.p0_recon_TR(100:end,m,1))+1,'LineWidth',2);
+% plot(obj.Y,obj.p0_recon_TR(:,m,1)/max(obj.p0_recon_TR(100:end,m,1))+1,'LineWidth',2);
 plot(obj.Y,obj.p0_recon_FT(:,m,1)/max(obj.p0_recon_FT(100:end,m,1))+2,'LineWidth',2);
 legend('BF','TR','FT');
 xlim([4 8]);
