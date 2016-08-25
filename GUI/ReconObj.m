@@ -56,7 +56,7 @@ classdef ReconObj < handle
         end
         function highpass(obj,Fp,Fst) %enter in MHz: Passband, Stopband
             %pass band frequency in rad/sample
-            if isemtpy(obj.p0_recon_filt)
+            if isempty(obj.p0_recon_filt)
                 obj.p0_recon_filt = obj.p0_recon;
             end
             Fp = Fp*1E6;

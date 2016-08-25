@@ -51,12 +51,19 @@ classdef RFObj < handle
         function save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'.mat'],'obj')
         end
-        function plot(obj)
+        function plot(obj,varargin)
+            if ~isempty(varargin)
+                fig = varargin{1};
+                ax = varargin{2};
+                fig.CurrentAxes=ax;
+            else
+                fig = figure;
+            end
             Im1=obj.rfm(:,:,1);
-            figure;
+            
             colormap('gray');
             imagesc(obj.X,obj.Y,Im1);
-            title('Slice 1');
+            title('Raw');
             caxis([-120 120])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            

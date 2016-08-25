@@ -8,14 +8,14 @@ f = figure('Visible','off','Position',[360,500,1000,900]);
 
 % Construct the components.
 hbrowse    = uicontrol('Parent',f,'Style','pushbutton',...
-             'String','Browse','Position',[300,800,70,25],...
+             'String','Browse','Position',[100,850,70,25],...
              'Callback',@browsebutton_Callback);
 hstart    = uicontrol('Parent',f,'Style','pushbutton',...
-             'String','Start','Position',[400,800,70,25],...
+             'String','Start','Position',[100,820,70,25],...
              'Callback',@startbutton_Callback,...
              'Tag','StartButton');
 hstop = uicontrol('Parent',f,'Style','pushbutton',...
-             'String','Stop','Position',[500,800,70,25],...
+             'String','Plot','Position',[200,820,70,25],...
              'Callback',@stopbutton_Callback,...
              'Tag','StopButton');
          
@@ -47,21 +47,30 @@ f.Visible = 'on';
 % Push button callbacks.
 
     function startbutton_Callback(hObject,eventdata)
-        [PAobj, ~, ~] = LoadFiles(pathname);
-        while get(hObject,'Value')
-            sinc_data=abs(sinc_data.^1.1);
-            surf(hax1,sinc_data);
-            drawnow;
-            pause(0.1);
-        end
+        [rfObj, flw, ~, ~] = LoadFiles('Path',hbrowse.UserData);
+        rfObj.detrend;
+        rfObj.del=2;
+        rfObj.plot(f,hax1);
+%         reconObj=ReconFcn(rfObj);
+%         reconObj.wallfilter;
+%         reconObj.highpass(5,2);
+%         xcorrObj=EnsembleCorrelateFcn(reconObj,flw);
+%         xcorrObj.plot;        
+%         while get(hObject,'Value')
+%             sinc_data=abs(sinc_data.^1.1);
+%             surf(hax1,sinc_data);
+%             drawnow;
+%             pause(0.1);
+%         end
     end
 
     function stopbutton_Callback(hObject,eventdata)
-        set(hstart,'Value',0)        
+        set(hstart,'Value',0)
+        
     end
 
     function browsebutton_Callback(hObject,eventdata)
         % Display contour plot of the currently selected data.
-        pathname = uigetdir();
+        hObject.UserData = uigetdir();  
     end
 end
