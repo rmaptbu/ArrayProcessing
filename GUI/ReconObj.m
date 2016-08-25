@@ -45,7 +45,7 @@ classdef ReconObj < handle
             obj.p0_recon  = obj.p0_recon (:,:,1+N:end);            
         end %remove N RFM files  
         %Filter
-        function Wallfilter(obj)
+        function wallfilter(obj)
             obj.p0_recon_filt(:,:,1:end)=bsxfun(@minus,...
                 obj.p0_recon_filt(:,:,1:end),mean(obj.p0_recon_filt(:,:,1:end),3));
             %
@@ -54,7 +54,7 @@ classdef ReconObj < handle
             %             obj.p0_recon_filt(:,:,2:2:end)=bsxfun(@minus,...
             %                 obj.p0_recon_filt(:,:,2:2:end),mean(obj.p0_recon_filt(:,:,2:2:end),3));
         end
-        function Highpass(obj,Fp,Fst) %enter in MHz: Passband, Stopband
+        function highpass(obj,Fp,Fst) %enter in MHz: Passband, Stopband
             %pass band frequency in rad/sample
             if isemtpy(obj.p0_recon_filt)
                 obj.p0_recon_filt = obj.p0_recon;
@@ -69,7 +69,7 @@ classdef ReconObj < handle
         end
         %Correlation
         %Graphical output
-        function Plot (obj,i, varargin)
+        function plot (obj,i, varargin)
             SaveFig = 0;
             figname = 0;
             if ~isempty(varargin)
@@ -85,8 +85,8 @@ classdef ReconObj < handle
                 end
             end
             
-            Im1=obj.p0_recon(:,:,2*i-1);
-            Im2=obj.p0_recon(:,:,2*i);
+            Im1=obj.p0_recon_filt(:,:,2*i-1);
+            Im2=obj.p0_recon_filt(:,:,2*i);
             
             
             fig1 = figure('Visible','off'); 

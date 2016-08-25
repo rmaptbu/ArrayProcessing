@@ -25,7 +25,7 @@ classdef RFObj < handle
             obj.pathname = pathname; %location of data
             obj.filename = filename; %name of .mat file
             
-            dx = pitch*1E-3;
+            dx = pitch;
             dy = c/fs;
             obj.X = (0:dx:(Nx-1)*dx)*1E3-(Nx/2)*dx*1E3;
             obj.Y = (0:dy:(Ny-1)*dy)*1E3;
