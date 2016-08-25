@@ -1,6 +1,6 @@
 function reconObj = ReconFcn(rfObj,varargin)
 %% Parse Inpus
-upsample=1;
+upsample=2;
 recon_type='FT';
 if ~isempty(varargin)
     for input_index = 1:2:length(varargin)
@@ -81,8 +81,8 @@ switch(recon_type)
         error('Unknown optional input');
 end
 %% Create ouptut object
-reconObj = ReconObj(rfObj.fs, rfObj.c, rfObj.pitch, rfObj.pathname,...
-    'recon', X, Y,p0_recon);
+reconObj = ReconObj(rfObj.fs, rfObj.c, rfObj.pitch,...
+    rfObj.pathname,'recon', X, Y,p0_recon);
 
 %% Reconstruction Functions
     function TR() %Reconstruction via time reversal

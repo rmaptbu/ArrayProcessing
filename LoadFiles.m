@@ -1,4 +1,4 @@
-function [PAFrames, USFrames, pathname] = LoadFiles(varargin)
+function [PAFrames, flw, USFrames, pathname] = LoadFiles(varargin)
 %function settings
 nr_load_fr=2; %how many consectives frames in file
 nr_skip_fr=18; %how many frames to skip reading
@@ -56,9 +56,18 @@ if ~isa(USFrames,'Frames')
     USFrames = typecast(USFrames,'Frames');
 end
 
-%%Initialise K-Wave
+
 PAFrames.KWaveInit();
+flw.theta=PAFrames.flw.theta;
+flw.tube_diameter=PAFrames.flw.tube_diameter;
+flw.PRF=PAFrames.flw.PRF;
+flw.rate=PAFrames.flw_r;
 USFrames.KWaveInit();
+temp = RFObj(PAFrames.acq.fs,PAFrames.RF.speed_of_sound,...
+    PAFrames.RF.pitch*1E-3,PAFrames.pathname,'RFobj',...
+    size(PAFrames.rfm,2),size(PAFrames.rfm,1));
+temp.rfm=PAFrames.rfm;
+PAFrames=temp;
 end
 
 function [frames] = LoadFrames(pathname,objname,files,...

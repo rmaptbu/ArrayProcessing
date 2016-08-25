@@ -7,8 +7,6 @@ classdef ReconObj < handle
         pitch %pitch between detectors
         pathname %location of data on disk
         filename %name of object when saved
-        Nx %number of detectors
-        Ny %number of samples
         
         %data
         p0_recon
@@ -17,6 +15,7 @@ classdef ReconObj < handle
         %Plots
         X %Ticks for X-axis scaling
         Y %Ticks for Y-axis scaling
+        crop=[-inf inf];
     end
     
     methods
@@ -70,7 +69,7 @@ classdef ReconObj < handle
         end
         %Correlation
         %Graphical output
-        function PlotRecon (obj,i, varargin)
+        function Plot (obj,i, varargin)
             SaveFig = 0;
             figname = 0;
             if ~isempty(varargin)

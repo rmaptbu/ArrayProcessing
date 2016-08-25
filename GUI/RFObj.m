@@ -6,8 +6,6 @@ classdef RFObj < handle
         pitch %pitch between detectors
         pathname %location of data on disk
         filename %name of object when saved
-        Nx %number of detectors
-        Ny %number of samples
         
         %data
         rfm %rf matrix
@@ -26,8 +24,6 @@ classdef RFObj < handle
             obj.pitch = pitch;%pitch between detectors (m)
             obj.pathname = pathname; %location of data
             obj.filename = filename; %name of .mat file
-            obj.Nx = Nx;
-            obj.Ny = Ny;
             
             dx = pitch*1E-3;
             dy = c/fs;

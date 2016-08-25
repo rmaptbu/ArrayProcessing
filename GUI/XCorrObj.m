@@ -6,20 +6,12 @@ classdef XCorrObj < handle
         pitch %pitch between detectors
         pathname %location of data on disk
         filename %name of object when saved
-        Nx %number of detectors
-        Ny %number of samples
         
         %data
-        xc_raw %Raw ensemble cross correlation
-        xc_raw_min
         xc_disp %cross correlation displacement map
         xc_amp %cross correlation amplitude map
-        xc_amp_me
         xc_mask
-        xc_flw %calculated flow speed
-        xc_flw_std %standard deviation of flow speed
-        xc_all %all flow speed measurements
-        xc_mask_manual={}       
+        flw
 
         %Plots
         X %Ticks for X-axis scaling
@@ -27,7 +19,8 @@ classdef XCorrObj < handle
     end
 
     methods
-        function obj = XCorrObj (fs, c, pitch, pathname, filename, X, Y)
+        function obj = XCorrObj (fs, c, pitch, pathname, filename, X, Y,...
+                xc_disp, xc_amp, xc_mask,flw)
             obj.fs = fs;%sampling frequency (Hz)
             obj.c = c;%speed of sound (m/s)
             obj.pitch = pitch;%pitch between detectors (m)
@@ -35,6 +28,11 @@ classdef XCorrObj < handle
             obj.filename = filename; %name of .mat file
             obj.X = X;
             obj.Y = Y;
+            obj.xc_disp = xc_disp;
+            obj.xc_amp = xc_amp;
+            obj.xc_mask = xc_mask;
+            obj.flw = flw;
+            
         end
         %Prepare Object
         function PlotXC (obj, varargin)
