@@ -46,13 +46,13 @@ classdef ReconObj < handle
         end %remove N RFM files  
         %Filter
         function wallfilter(obj)
-            obj.p0_recon_filt(:,:,1:end)=bsxfun(@minus,...
-                obj.p0_recon_filt(:,:,1:end),mean(obj.p0_recon_filt(:,:,1:end),3));
-            %
-            %             obj.p0_recon_filt(:,:,1:2:end-1)=bsxfun(@minus,...
-            %                 obj.p0_recon_filt(:,:,1:2:end-1),mean(obj.p0_recon_filt(:,:,1:2:end-1),3));
-            %             obj.p0_recon_filt(:,:,2:2:end)=bsxfun(@minus,...
-            %                 obj.p0_recon_filt(:,:,2:2:end),mean(obj.p0_recon_filt(:,:,2:2:end),3));
+            %             obj.p0_recon_filt(:,:,1:end)=bsxfun(@minus,...
+            %                 obj.p0_recon_filt(:,:,1:end),mean(obj.p0_recon_filt(:,:,1:end),3));
+            
+            obj.p0_recon_filt(:,:,1:2:end-1)=bsxfun(@minus,...
+                obj.p0_recon_filt(:,:,1:2:end-1),mean(obj.p0_recon_filt(:,:,1:2:end-1),3));
+            obj.p0_recon_filt(:,:,2:2:end)=bsxfun(@minus,...
+                obj.p0_recon_filt(:,:,2:2:end),mean(obj.p0_recon_filt(:,:,2:2:end),3));
         end
         function highpass(obj,Fp,Fst) %enter in MHz: Passband, Stopband
             %pass band frequency in rad/sample
@@ -69,7 +69,24 @@ classdef ReconObj < handle
         end
         %Correlation
         %Graphical output
-        function plot (obj,i, varargin)
+        function plot(obj,varargin)
+            if ~isempty(varargin)
+                fig = varargin{1};
+                ax = varargin{2};
+                fig.CurrentAxes=ax;
+            else
+                fig = figure;
+            end
+            Im1=obj.p0_recon_filt(:,:,1);
+            
+            colormap('gray');
+            imagesc(obj.X,obj.Y,Im1);
+            title('Reconstruction');
+            caxis([-120 120])
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');
+        end
+        function plot2 (obj,i, varargin)
             SaveFig = 0;
             figname = 0;
             if ~isempty(varargin)

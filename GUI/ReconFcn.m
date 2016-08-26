@@ -26,7 +26,7 @@ del=del/(dy*1E3); %in pixel
 h = waitbar(0, 'Initialising Waitbar');
 msg='Extracting RF Matrix...';
 rfm=rfObj.rfm;
-for i=1:size(rfObj,3)
+for i=1:size(rfm,3)
     waitbar(i/(size(rfObj,3)),h,msg);
     rfm(:,:,i)=imtranslate(rfObj.rfm(:,:,i),[0 -del]);  
 end

@@ -49,11 +49,14 @@ f.Visible = 'on';
     function startbutton_Callback(hObject,eventdata)
         [rfObj, flw, ~, ~] = LoadFiles('Path',hbrowse.UserData);
         rfObj.detrend;
-        rfObj.del=2;
+        rfObj.del=1;
         rfObj.plot(f,hax1);
-%         reconObj=ReconFcn(rfObj);
+        reconObj=ReconFcn(rfObj);
 %         reconObj.wallfilter;
-%         reconObj.highpass(5,2);
+        reconObj.highpass(5,2);
+        reconObj.plot(f,hax3);
+        assignin('base','rfObj',rfObj);
+        assignin('base','reconObj',reconObj);
 %         xcorrObj=EnsembleCorrelateFcn(reconObj,flw);
 %         xcorrObj.plot;        
 %         while get(hObject,'Value')
@@ -65,7 +68,10 @@ f.Visible = 'on';
     end
 
     function stopbutton_Callback(hObject,eventdata)
-        set(hstart,'Value',0)
+        reconObj=evalin('base','reconObj');
+        reconObj.wallfilter;
+%         reconObj.highpass(10,2);
+        reconObj.plot(f,hax2);
         
     end
 

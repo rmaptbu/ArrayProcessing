@@ -65,6 +65,7 @@ classdef RFObj < handle
             imagesc(obj.X,obj.Y,Im1);
             title('Raw');
             caxis([-120 120])
+            ylim([obj.del inf])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            
         end
