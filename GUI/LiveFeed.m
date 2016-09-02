@@ -8,17 +8,17 @@ f = figure('Visible','off','Position',[360,500,1000,900]);
 
 % Construct the components.
 hbrowse    = uicontrol('Parent',f,'Style','pushbutton',...
-             'String','Browse','Position',[100,850,70,25],...
-             'Callback',@browsebutton_Callback);
+    'String','Browse','Position',[100,850,70,25],...
+    'Callback',@browsebutton_Callback);
 hstart    = uicontrol('Parent',f,'Style','pushbutton',...
-             'String','Start','Position',[100,820,70,25],...
-             'Callback',@startbutton_Callback,...
-             'Tag','StartButton');
+    'String','Start','Position',[100,820,70,25],...
+    'Callback',@startbutton_Callback,...
+    'Tag','StartButton');
 hstop = uicontrol('Parent',f,'Style','pushbutton',...
-             'String','Plot','Position',[200,820,70,25],...
-             'Callback',@stopbutton_Callback,...
-             'Tag','StopButton');
-         
+    'String','Plot','Position',[200,820,70,25],...
+    'Callback',@stopbutton_Callback,...
+    'Tag','StopButton');
+
 hax1 = axes('Parent',f,'Units','pixels','Position',[100,100,200,700]);
 hax2 = axes('Parent',f,'Units','pixels','Position',[400,100,200,700]);
 hax3 = axes('Parent',f,'Units','pixels','Position',[700,100,200,700]);
@@ -47,36 +47,37 @@ f.Visible = 'on';
 % Push button callbacks.
 
     function startbutton_Callback(hObject,eventdata)
-        [rfObj, flw, ~, ~] = LoadFiles('Path',hbrowse.UserData);
+        %         [rfObj, flw, ~, ~] = LoadFiles('Path',hbrowse.UserData);
+        rfObj = UltrasonixImport('Path',hbrowse.UserData);
         rfObj.detrend;
         rfObj.del=1;
         rfObj.plot(f,hax1);
         reconObj=ReconFcn(rfObj);
-%         reconObj.wallfilter;
+        %         reconObj.wallfilter;
         reconObj.highpass(5,2);
         reconObj.plot(f,hax3);
         assignin('base','rfObj',rfObj);
         assignin('base','reconObj',reconObj);
-%         xcorrObj=EnsembleCorrelateFcn(reconObj,flw);
-%         xcorrObj.plot;        
-%         while get(hObject,'Value')
-%             sinc_data=abs(sinc_data.^1.1);
-%             surf(hax1,sinc_data);
-%             drawnow;
-%             pause(0.1);
-%         end
+        %         xcorrObj=EnsembleCorrelateFcn(reconObj,flw);
+        %         xcorrObj.plot;
+        %         while get(hObject,'Value')
+        %             sinc_data=abs(sinc_data.^1.1);
+        %             surf(hax1,sinc_data);
+        %             drawnow;
+        %             pause(0.1);
+        %         end
     end
 
     function stopbutton_Callback(hObject,eventdata)
         reconObj=evalin('base','reconObj');
         reconObj.wallfilter;
-%         reconObj.highpass(10,2);
+        %         reconObj.highpass(10,2);
         reconObj.plot(f,hax2);
         
     end
 
     function browsebutton_Callback(hObject,eventdata)
         % Display contour plot of the currently selected data.
-        hObject.UserData = uigetdir();  
+        hObject.UserData = uigetdir();
     end
 end
