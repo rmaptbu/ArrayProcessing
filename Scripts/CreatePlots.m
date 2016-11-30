@@ -14,7 +14,7 @@ mode='';
 crop=[0 6];
 for i=1:length(cases)    
     path=[pathname,'/',cases{i}];
-    disp(i/length(cases))
+%     disp(i/length(cases))
     if exist(path,'dir')        
         disp(cases{i});
         [PAFrames, ~, ~] = LoadFiles('Path',path,'LoadExisting',1);

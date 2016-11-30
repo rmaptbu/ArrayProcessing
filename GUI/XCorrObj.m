@@ -36,6 +36,11 @@ classdef XCorrObj < handle
             
         end
         %Prepare Object
+        function [v]=findRate(obj)
+            d=obj.flw.tube_diameter; %(mm)
+            A=pi*(d/2)^2;
+            v=obj.flw.rate/A*1000/60; %(mm/s)
+        end
         function plot (obj, varargin)
             
             SaveFig = 0;
@@ -43,17 +48,28 @@ classdef XCorrObj < handle
             mask = 1;
             if ~isempty(varargin)
                 for input_index = 1:2:length(varargin)
-                    switch varargin{input_index}
-                        case 'SaveFig'
-                            SaveFig = varargin{input_index + 1};
-                        case 'FigName'
-                            figname = varargin{input_index + 1};
-                        case 'Mask'
-                            mask = varargin{input_index + 1};
-                        otherwise
-                            error('Unknown optional input');
-                    end
+                    if ishandle(varargin{1})
+                        fig = varargin{1};
+                        ax = varargin{2};
+                        fig.CurrentAxes=ax;
+                    else                        
+                        switch varargin{input_index}
+                            case 'SaveFig'
+                                SaveFig = varargin{input_index + 1};
+                            case 'FigName'
+                                figname = varargin{input_index + 1};
+                            case 'Mask'
+                                mask = varargin{input_index + 1};
+                            otherwise
+                                error('Unknown optional input');
+                        end
+                        fig=figure('Visible','off');
+                        set(fig, 'Position', [100 100 600+400*mask 400]);
+                    end                    
                 end
+            else
+                fig=figure('Visible','off');
+                set(fig, 'Position', [100 100 600+400*mask 400]);
             end
             
             Im2=obj.xc_disp;
@@ -62,10 +78,9 @@ classdef XCorrObj < handle
             %find flowrate in mm/s
             d=obj.flw.tube_diameter; %(mm)
             A=pi*(d/2)^2;
-            v=obj.flw.rate/A*1000/60;
+            v=obj.flw.rate/A*1000/60; 
             
-            fig=figure('Visible','off');            
-            
+            if strcmp(fig.Visible,'off') 
             sb1 = subplot(1,2+mask,1);
             Im2=-Im2; %minus sign because tube was directed the wrong way
             imagesc(obj.X,obj.Y,Im2);
@@ -106,11 +121,25 @@ classdef XCorrObj < handle
                 c=colorbar;
                 ylim([obj.crop]);xlim([-2 2]);
                 ylabel(c,'Flow Speed (mm/s)');
+            end 
+            else
+            
+            Im2=-Im2; %minus sign because tube was directed the wrong way
+            imagesc(obj.X,obj.Y,Im2);
+%             title('Flow Speed (normalised)')
+            title(['Flow Speed: ',num2str(v),'mm/s']);
+            xlabel('Lateral (mm)');
+            ylabel('Depth (mm)');
+            load('cm_surf.mat');
+            caxis([-2*v 2*v])
+%             caxis([-2 2]);
+            colormap(ax,cm_surf);
+            c=colorbar('south','Color',[0.5 0.5 0.5]);
+            ylabel(c,'Flow Speed (mm/s)');
+
+            ylim(obj.crop);xlim([-2 2]);
+            
             end
-            
-            
-            set(fig, 'Position', [100 100 600+400*mask 400]);
-            
             if SaveFig
                 if ~figname
                     figname = [obj.pathname,'/',obj.filename,'_xcorr.png'];

@@ -15,7 +15,7 @@ path=[pathn,'/'];
 
 sample_frequency = 40e6; %[Hz]
 sound_speed = 1490;      %[m/s]
-pitch=0.305e-3;             %[m]
+pitch=0.100e-3;             %[m]
 %  T=22;
 %  medium.sound_speed=1.40238744e3+5.03836171*T-5.81172916e-2*(T.^2)+3.34638117e-4*(T^3)-...
 %      1.48259672e-6*(T^4)+3.16585020e-9*(T^5);

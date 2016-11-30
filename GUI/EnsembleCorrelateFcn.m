@@ -1,13 +1,14 @@
 function xcorrObj = EnsembleCorrelateFcn(reconObj,flw,varargin)
 %% Pars Inputs
 all_corrs = 0;
-im_stack = reconObj.p0_recon_filt;
-assert(rem(size(im_stack,3),2)==0);
+
 x_corr.IW=32;
 x_corr.SW=16;
 x_corr.SZ=1;
 mask_mode = 'median';
 mask_manual = {};
+shift_order = false;
+truncate = false;
 
 if ~isempty(varargin)
     for input_index = 1:2:length(varargin)
@@ -20,12 +21,34 @@ if ~isempty(varargin)
                 mask_mode = varargin{input_index + 1};
             case 'MaskManual'
                 mask_manual = varargin{input_index + 1};
+            case 'ShiftOrder'
+                shift_order = varargin{input_index + 1};
+            case 'Truncate'
+                truncate = varargin{input_index + 1};
             otherwise
                 error('Unknown optional input');
         end
     end
 end
 
+if truncate
+    mask=zeros(size(reconObj.p0_recon_filt));
+    m = reconObj.crop;
+    Y_m=reconObj.Y>m(1) & reconObj.Y<m(2);
+    Ymin=find(Y_m,1,'first'); %find index of non-zero elements
+    Ymax=find(Y_m,1,'last');
+    im_stack = reconObj.p0_recon_filt(Ymin:Ymax,:,:);
+else
+    im_stack = reconObj.p0_recon_filt;
+end
+
+if (rem(size(im_stack,3),2)~=0);
+    if shift_order
+        im_stack=im_stack(:,:,2:end);
+    else
+        im_stack=im_stack(:,:,1:end-1);
+    end
+end
 
 %% Ensemble Correlation
 dim1=ceil(x_corr.SW/2)*2-1;

@@ -15,7 +15,7 @@ classdef ReconObj < handle
         %Plots
         X %Ticks for X-axis scaling
         Y %Ticks for Y-axis scaling
-        crop=[-inf inf];
+        crop=[-inf 20];
     end
     
     methods
@@ -77,12 +77,14 @@ classdef ReconObj < handle
             else
                 fig = figure;
             end
-            Im1=obj.p0_recon_filt(:,:,1);
+%             Im1=obj.p0_recon_filt(:,:,1);
+            Im1=mean(obj.p0_recon_filt,3);
             
             colormap('gray');
             imagesc(obj.X,obj.Y,Im1);
             title('Reconstruction');
-            caxis([-120 120])
+            caxis([-2 2])
+            ylim([obj.crop]);xlim([-2 2]);
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
         end
@@ -111,7 +113,7 @@ classdef ReconObj < handle
             colormap('gray');
             imagesc(obj.X,obj.Y,Im1);
             title('Image 1');
-            caxis([-120 120])
+            caxis([-50 50])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            
             ylim([obj.crop]);xlim([-2 2]);
@@ -120,7 +122,7 @@ classdef ReconObj < handle
             colormap('gray');
             imagesc(obj.X,obj.Y,Im2);
             title('Image 2');
-            caxis([-120 120])
+            caxis([-50 50])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');
             ylim([obj.crop]);xlim([-2 2]);
