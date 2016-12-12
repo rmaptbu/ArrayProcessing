@@ -112,7 +112,7 @@ reconObj = ReconObj(rfObj.fs, rfObj.c, rfObj.pitch,...
         
         for j=1:Nz
             waitbar(j/Nz,h,msg);
-            disp(j/Nz)
+%             disp(j/Nz);
             sensor_data(1:Ny,pad+1:pad+Nx)=rfm(:,:,j);
             recon = kspaceLineRecon(sensor_data, dx, dt, ...
                c, 'Interp', '*linear');

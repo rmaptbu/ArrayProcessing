@@ -48,6 +48,35 @@ classdef RFObj < handle
             %Remove mean of each row (normalise rows)
             obj.rfm=bsxfun(@minus,obj.rfm,mean(obj.rfm,1));
         end
+        function svd(obj)
+            for i = 1:size(obj.rfm,3);                
+                sensor_data_noise=obj.rfm(:,:,i)';
+                PCA=1;
+                %From Xia Wenfeng (UCL)
+                mean_vals=mean(sensor_data_noise, 2);
+                mean_vals_mat=repmat(mean_vals',size(sensor_data_noise,2),1);
+                sensor_data_noise=sensor_data_noise-mean_vals_mat';
+                %
+                [U,S,V] = svds(sensor_data_noise', 50);
+                U=U(:,1:PCA);
+                invMat=inv(U'*U)*U';
+                sensor_data_t=sensor_data_noise';
+                
+                n_elements=size(sensor_data_t,2);
+                n_time=size(sensor_data_t,1);
+                
+                % new filtered image
+                sensor_data_filtered=zeros(n_time,n_elements);
+                
+                for k=1:n_elements
+                    c=invMat*sensor_data_t(:,k);
+                    sensor_data_filtered(:,k)=sensor_data_t(:,k)-U*c;
+                end
+                sensor_data=sensor_data_filtered';
+                sensor_data_PCA(:,:,PCA) = sensor_data;
+                obj.rfm(:,:,i)=sensor_data_PCA';
+            end            
+        end
         function save(obj) %save the object to original folder
             save([obj.pathname,'/',obj.filename,'.mat'],'obj')
         end
@@ -59,12 +88,13 @@ classdef RFObj < handle
             else
                 fig = figure;
             end
-            Im1=obj.rfm(:,:,1);
-            
+            Im1=obj.rfm(:,:,2);
+            Im1=abs(hilbert(Im1)); %get envelope
+            Im1=20*log(Im1/max(Im1(:))); %dB scale
             colormap('gray');
             imagesc(obj.X,obj.Y,Im1);
             title('Raw');
-            caxis([-120 120])
+            caxis([-80 -30])
             ylim([obj.del inf])
             xlabel('Lateral (mm)');
             ylabel('Depth (mm)');            
